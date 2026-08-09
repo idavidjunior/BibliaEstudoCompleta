@@ -13,6 +13,7 @@ public class Favorite implements Serializable {
     private String tags;
     private int color;
     private Date createdAt;
+    private long groupId;
 
     public long getId() { return id; }
     public void setId(long id) { this.id = id; }
@@ -40,6 +41,9 @@ public class Favorite implements Serializable {
 
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
+
+    public long getGroupId() { return groupId; }
+    public void setGroupId(long groupId) { this.groupId = groupId; }
 
     public String getReference() {
         return bookName + " " + chapter + ":" + verseNumber;

@@ -11,6 +11,7 @@ public class Highlight {
     private String bookName;
     private int testament;
     private String verseText;
+    private long groupId;
 
     public long getId() { return id; }
     public void setId(long id) { this.id = id; }
@@ -32,6 +33,8 @@ public class Highlight {
     public void setTestament(int testament) { this.testament = testament; }
     public String getVerseText() { return verseText; }
     public void setVerseText(String verseText) { this.verseText = verseText; }
+    public long getGroupId() { return groupId; }
+    public void setGroupId(long groupId) { this.groupId = groupId; }
 
     public String getReference() {
         return bookName + " " + chapter + ":" + verseStart + (verseEnd > verseStart ? "-" + verseEnd : "");

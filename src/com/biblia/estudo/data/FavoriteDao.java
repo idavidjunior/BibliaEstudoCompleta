@@ -28,6 +28,7 @@ public class FavoriteDao {
         cv.put("tags", fav.getTags());
         cv.put("color", fav.getColor());
         cv.put("created_at", System.currentTimeMillis());
+        cv.put("group_id", fav.getGroupId());
         return db.insert(BibleDatabaseHelper.TABLE_FAVORITES, null, cv);
     }
 
@@ -62,6 +63,29 @@ public class FavoriteDao {
         return list;
     }
 
+    public List<Favorite> getByGroup(long groupId) {
+        List<Favorite> list = new ArrayList<>();
+        String where = groupId == 0 ? "group_id=0 OR group_id IS NULL" : "group_id=?";
+        String[] args = groupId == 0 ? new String[]{} : new String[]{String.valueOf(groupId)};
+        Cursor c = db.query(BibleDatabaseHelper.TABLE_FAVORITES, null, where, args, null, null, "created_at DESC");
+        if (c != null) {
+            while (c.moveToNext()) list.add(cursorToFavorite(c));
+            c.close();
+        }
+        return list;
+    }
+
+    public int moveToGroup(List<Long> favoriteIds, long groupId) {
+        if (favoriteIds == null || favoriteIds.isEmpty()) return 0;
+        ContentValues cv = new ContentValues();
+        cv.put("group_id", groupId);
+        int count = 0;
+        for (Long id : favoriteIds) {
+            count += db.update(BibleDatabaseHelper.TABLE_FAVORITES, cv, "_id=?", new String[]{String.valueOf(id)});
+        }
+        return count;
+    }
+
     public List<Favorite> search(String query) {
         List<Favorite> list = new ArrayList<>();
         Cursor c = db.query(BibleDatabaseHelper.TABLE_FAVORITES, null,
@@ -93,6 +117,10 @@ public class FavoriteDao {
         f.setTags(c.getString(c.getColumnIndexOrThrow("tags")));
         f.setColor(c.getInt(c.getColumnIndexOrThrow("color")));
         f.setCreatedAt(new Date(c.getLong(c.getColumnIndexOrThrow("created_at"))));
+        try {
+            int groupIdx = c.getColumnIndex("group_id");
+            if (groupIdx >= 0) f.setGroupId(c.getLong(groupIdx));
+        } catch (Exception ignored) {}
         return f;
     }
 }

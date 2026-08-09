@@ -16,7 +16,7 @@ public class DatabaseManager {
 
     private static final String PREFS_NAME = "db_manager_prefs";
     private static final String KEY_DB_VERSION = "db_copied_version";
-    private static final int CURRENT_DB_VERSION = 7;
+    private static final int CURRENT_DB_VERSION = 8;
 
     private static DatabaseManager instance;
     private Context context;
@@ -91,12 +91,15 @@ public class DatabaseManager {
         try {
             Cursor c = db.rawQuery("PRAGMA table_info(highlights)", null);
             boolean hasCreatedAt = false;
+            boolean hasGroupId = false;
             if (c != null) {
                 while (c.moveToNext()) {
                     String colName = c.getString(c.getColumnIndexOrThrow("name"));
                     if ("created_at".equals(colName)) {
                         hasCreatedAt = true;
-                        break;
+                    }
+                    if ("group_id".equals(colName)) {
+                        hasGroupId = true;
                     }
                 }
                 c.close();
@@ -104,6 +107,43 @@ public class DatabaseManager {
             if (!hasCreatedAt) {
                 db.execSQL("ALTER TABLE highlights ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0");
             }
+            if (!hasGroupId) {
+                db.execSQL("ALTER TABLE highlights ADD COLUMN group_id INTEGER DEFAULT 0");
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            Cursor c = db.rawQuery("PRAGMA table_info(favorites)", null);
+            boolean hasGroupId = false;
+            if (c != null) {
+                while (c.moveToNext()) {
+                    String colName = c.getString(c.getColumnIndexOrThrow("name"));
+                    if ("group_id".equals(colName)) {
+                        hasGroupId = true;
+                        break;
+                    }
+                }
+                c.close();
+            }
+            if (!hasGroupId) {
+                db.execSQL("ALTER TABLE favorites ADD COLUMN group_id INTEGER DEFAULT 0");
+            }
+        } catch (Exception ignored) {}
+
+        // Create groups table if not exists
+        try {
+            db.execSQL("CREATE TABLE IF NOT EXISTS groups (" +
+                    "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "name TEXT NOT NULL," +
+                    "type INTEGER NOT NULL," +
+                    "parent_id INTEGER DEFAULT 0," +
+                    "group_order INTEGER DEFAULT 0," +
+                    "created_at INTEGER NOT NULL," +
+                    "color INTEGER DEFAULT 0" +
+                    ");");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_highlights_group ON highlights(group_id);");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_favorites_group ON favorites(group_id);");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_groups_type ON groups(type);");
         } catch (Exception ignored) {}
     }
 

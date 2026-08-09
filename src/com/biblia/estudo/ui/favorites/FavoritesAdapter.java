@@ -1,6 +1,8 @@
 package com.biblia.estudo.ui.favorites;
 
 import android.content.Context;
+import android.graphics.Color;
+import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,11 +19,18 @@ public class FavoritesAdapter extends BaseAdapter {
     private Context context;
     private List<Favorite> favorites;
     private LayoutInflater inflater;
+    private SparseBooleanArray selectedItems;
 
     public FavoritesAdapter(Context context, List<Favorite> favorites) {
         this.context = context;
         this.favorites = favorites;
         this.inflater = LayoutInflater.from(context);
+        this.selectedItems = new SparseBooleanArray();
+    }
+
+    public void setSelectedItems(SparseBooleanArray selectedItems) {
+        this.selectedItems = selectedItems;
+        notifyDataSetChanged();
     }
 
     @Override
@@ -50,6 +59,14 @@ public class FavoritesAdapter extends BaseAdapter {
         Favorite fav = favorites.get(position);
         holder.favRef.setText(fav.getReference());
         holder.favSnippet.setText(fav.getVerseText());
+
+        // Highlight selected items
+        boolean isSelected = selectedItems.get(position, false);
+        if (isSelected) {
+            convertView.setBackgroundColor(Color.parseColor("#E3F2FD"));
+        } else {
+            convertView.setBackgroundColor(Color.TRANSPARENT);
+        }
 
         final int pos = position;
         holder.btnRemove.setOnClickListener(new View.OnClickListener() {

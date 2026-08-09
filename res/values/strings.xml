@@ -113,6 +113,7 @@
 <string name="no_notes">Nenhuma anotação ainda</string>
     <string name="no_favorites">Nenhum favorito ainda</string>
     <string name="no_highlights">Nenhum destaque ainda</string>
+    <string name="no_groups">Nenhum grupo ainda</string>
     <string name="no_history">Nenhum histórico de leitura</string>
 
     <string name="sort_by_book">Por Livro (Referência)</string>
@@ -120,8 +121,24 @@
     <string name="sort_by_date">Por Data (Recentes)</string>
     <string name="sort_by_color">Por Cor</string>
     <string name="sort_by_tag">Por Tag</string>
+    <string name="sort_by_group">Por Grupo</string>
     <string name="organize_by">Organizar por:</string>
     <string name="title_highlights">Destaques</string>
+
+    <string name="btn_back">Voltar</string>
+    <string name="btn_home">Início</string>
+    <string name="groups">Grupos</string>
+    <string name="create_group">Criar Grupo</string>
+    <string name="group_name_hint">Nome do grupo</string>
+    <string name="group_created">Grupo criado</string>
+    <string name="group_deleted">Grupo excluído</string>
+    <string name="move_to_group">Mover para grupo</string>
+    <string name="no_group_selected">Nenhum grupo (raiz)</string>
+    <string name="manage_groups">Gerenciar Grupos</string>
+    <string name="edit_group">Editar Grupo</string>
+    <string name="delete_group">Excluir Grupo</string>
+    <string name="confirm_delete_group">Excluir este grupo? Os itens voltarão para a raiz.</string>
+    <string name="items_moved">%d item(ns) movido(s)</string>
 
     <string name="note_hint">Escreva sua anotação…</string>
     <string name="note_saved">Anotação salva</string>

@@ -2,6 +2,7 @@ package com.biblia.estudo.ui.highlights;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,12 +23,19 @@ public class HighlightsAdapter extends BaseAdapter {
     private List<Highlight> highlights;
     private LayoutInflater inflater;
     private SimpleDateFormat dateFormat;
+    private SparseBooleanArray selectedItems;
 
     public HighlightsAdapter(Context context, List<Highlight> highlights) {
         this.context = context;
         this.highlights = highlights;
         this.inflater = LayoutInflater.from(context);
         this.dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
+        this.selectedItems = new SparseBooleanArray();
+    }
+
+    public void setSelectedItems(SparseBooleanArray selectedItems) {
+        this.selectedItems = selectedItems;
+        notifyDataSetChanged();
     }
 
     @Override
@@ -73,6 +81,14 @@ public class HighlightsAdapter extends BaseAdapter {
         }
         meta += " • " + hl.getColorName();
         holder.hlMeta.setText(meta);
+
+        // Highlight selected items
+        boolean isSelected = selectedItems.get(position, false);
+        if (isSelected) {
+            convertView.setBackgroundColor(Color.parseColor("#E3F2FD"));
+        } else {
+            convertView.setBackgroundColor(Color.TRANSPARENT);
+        }
 
         final int pos = position;
         holder.btnRemove.setOnClickListener(new View.OnClickListener() {

@@ -14,6 +14,7 @@ public class BibleDatabaseHelper extends SQLiteOpenHelper {
     public static final String TABLE_FAVORITES = "favorites";
     public static final String TABLE_NOTES = "user_notes";
     public static final String TABLE_HIGHLIGHTS = "highlights";
+    public static final String TABLE_GROUPS = "groups";
     public static final String TABLE_READING_PROGRESS = "reading_progress";
     public static final String TABLE_READING_PLANS = "reading_plans";
     public static final String TABLE_PLAN_DAYS = "plan_days";
@@ -29,6 +30,7 @@ public class BibleDatabaseHelper extends SQLiteOpenHelper {
         createFavoritesTable(db);
         createNotesTable(db);
         createHighlightsTable(db);
+        createGroupsTable(db);
         createReadingProgressTable(db);
         createReadingPlansTable(db);
         createPlanDaysTable(db);
@@ -77,7 +79,8 @@ public class BibleDatabaseHelper extends SQLiteOpenHelper {
                 "book_name TEXT," +
                 "tags TEXT," +
                 "color INTEGER DEFAULT 0," +
-                "created_at INTEGER NOT NULL" +
+                "created_at INTEGER NOT NULL," +
+                "group_id INTEGER DEFAULT 0" +
                 ");");
     }
 
@@ -102,7 +105,20 @@ public class BibleDatabaseHelper extends SQLiteOpenHelper {
                 "verse_start INTEGER NOT NULL," +
                 "verse_end INTEGER NOT NULL," +
                 "color TEXT NOT NULL," +
-                "created_at INTEGER NOT NULL" +
+                "created_at INTEGER NOT NULL," +
+                "group_id INTEGER DEFAULT 0" +
+                ");");
+    }
+
+    private void createGroupsTable(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_GROUPS + " (" +
+                "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "name TEXT NOT NULL," +
+                "type INTEGER NOT NULL," +  // 1 = highlights, 2 = favorites
+                "parent_id INTEGER DEFAULT 0," +
+                "group_order INTEGER DEFAULT 0," +
+                "created_at INTEGER NOT NULL," +
+                "color INTEGER DEFAULT 0" +
                 ");");
     }
 
@@ -146,9 +162,12 @@ public class BibleDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_verses_book_chapter ON " + TABLE_VERSES + "(book_id, chapter);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_verses_text ON " + TABLE_VERSES + "(text);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_favorites_book ON " + TABLE_FAVORITES + "(book_id, chapter);");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_favorites_group ON " + TABLE_FAVORITES + "(group_id);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_notes_book ON " + TABLE_NOTES + "(book_id, chapter, verse_number);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_reading_progress ON " + TABLE_READING_PROGRESS + "(last_read_at DESC);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_highlights_book ON " + TABLE_HIGHLIGHTS + "(book_id, chapter);");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_highlights_group ON " + TABLE_HIGHLIGHTS + "(group_id);");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_groups_type ON " + TABLE_GROUPS + "(type);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_verses_chapter_verse ON " + TABLE_VERSES + "(chapter, verse_number);");
         db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS verses_fts USING fts4(content=\"\", text, book_id, chapter, verse_number);");
     }
@@ -164,6 +183,24 @@ public class BibleDatabaseHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 3) {
             // Apocryphal books added in pre-populated database, no structural change needed
+        }
+        if (oldVersion < 4) {
+            // Add created_at to highlights if missing (handled by DatabaseManager migration)
+        }
+        if (oldVersion < 5) {
+            // Add group_id to highlights and favorites
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_HIGHLIGHTS + " ADD COLUMN group_id INTEGER DEFAULT 0");
+            } catch (Exception ignored) {}
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_FAVORITES + " ADD COLUMN group_id INTEGER DEFAULT 0");
+            } catch (Exception ignored) {}
+            // Create groups table
+            createGroupsTable(db);
+            // Add indexes for group_id
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_highlights_group ON " + TABLE_HIGHLIGHTS + "(group_id);");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_favorites_group ON " + TABLE_FAVORITES + "(group_id);");
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_groups_type ON " + TABLE_GROUPS + "(type);");
         }
     }
 

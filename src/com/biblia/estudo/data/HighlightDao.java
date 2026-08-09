@@ -25,6 +25,7 @@ public class HighlightDao {
         cv.put("verse_end", h.getVerseEnd());
         cv.put("color", h.getColor());
         cv.put("created_at", System.currentTimeMillis());
+        cv.put("group_id", h.getGroupId());
         return db.insert(BibleDatabaseHelper.TABLE_HIGHLIGHTS, null, cv);
     }
 
@@ -82,6 +83,29 @@ public class HighlightDao {
         return list;
     }
 
+    public List<Highlight> getByGroup(long groupId) {
+        List<Highlight> list = new ArrayList<>();
+        String where = groupId == 0 ? "group_id=0 OR group_id IS NULL" : "group_id=?";
+        String[] args = groupId == 0 ? new String[]{} : new String[]{String.valueOf(groupId)};
+        Cursor c = db.query(BibleDatabaseHelper.TABLE_HIGHLIGHTS, null, where, args, null, null, "created_at DESC");
+        if (c != null) {
+            while (c.moveToNext()) list.add(cursorToWithBook(c));
+            c.close();
+        }
+        return list;
+    }
+
+    public int moveToGroup(List<Long> highlightIds, long groupId) {
+        if (highlightIds == null || highlightIds.isEmpty()) return 0;
+        ContentValues cv = new ContentValues();
+        cv.put("group_id", groupId);
+        int count = 0;
+        for (Long id : highlightIds) {
+            count += db.update(BibleDatabaseHelper.TABLE_HIGHLIGHTS, cv, "_id=?", new String[]{String.valueOf(id)});
+        }
+        return count;
+    }
+
     private Highlight cursorTo(Cursor c) {
         Highlight h = new Highlight();
         h.setId(c.getLong(c.getColumnIndexOrThrow("_id")));
@@ -91,6 +115,10 @@ public class HighlightDao {
         h.setVerseEnd(c.getInt(c.getColumnIndexOrThrow("verse_end")));
         h.setColor(c.getString(c.getColumnIndexOrThrow("color")));
         h.setCreatedAt(c.getLong(c.getColumnIndexOrThrow("created_at")));
+        try {
+            int groupIdx = c.getColumnIndex("group_id");
+            if (groupIdx >= 0) h.setGroupId(c.getLong(groupIdx));
+        } catch (Exception ignored) {}
         return h;
     }
 

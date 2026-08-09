@@ -79,6 +79,11 @@
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity
+            android:name=".ui.highlights.GroupManagerActivity"
+            android:label="@string/manage_groups"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
+        <activity
             android:name=".ui.notes.NotesActivity"
             android:label="@string/title_notes"
             android:configChanges="orientation|screenSize|keyboardHidden" />
