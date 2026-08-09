@@ -24,6 +24,7 @@ import com.biblia.estudo.model.ReadingProgress;
 import com.biblia.estudo.model.UserResource;
 import com.biblia.estudo.model.Verse;
 import com.biblia.estudo.ui.bible.BibleReaderActivity;
+import com.biblia.estudo.ui.notes.NotesActivity;
 import com.biblia.estudo.ui.resources.ResourcesActivity;
 import com.biblia.estudo.utils.NavigationHelper;
 
@@ -37,9 +38,10 @@ public class HomeActivity extends Activity {
     private TextView lastReadingRef, lastReadingText;
     private Button btnContinue, btnStart;
     private TextView verseOfDayText, verseOfDayRef;
-    private android.widget.FrameLayout resourcesSection;
+    private android.widget.FrameLayout resourcesSection, notesSection;
     private ListView resourceList;
     private View emptyResources;
+    private TextView notesPreview;
 
     private ReadingProgressDao progressDao;
     private BookDao bookDao;
@@ -65,14 +67,17 @@ public class HomeActivity extends Activity {
         verseOfDayText = findViewById(R.id.verseOfDayText);
         verseOfDayRef = findViewById(R.id.verseOfDayRef);
         resourcesSection = findViewById(R.id.resourcesSection);
+        notesSection = findViewById(R.id.notesSection);
         resourceList = findViewById(R.id.resourceList);
         emptyResources = findViewById(R.id.emptyResources);
+        notesPreview = findViewById(R.id.notesPreview);
 
         NavigationHelper.setupBottomNav(this);
         setupLastReading();
         setupVerseOfDay();
         setupButtons();
         setupResources();
+        setupNotes();
 
         findViewById(R.id.btnImportFile).setOnClickListener(v -> importFile());
         findViewById(R.id.btnImportFolder).setOnClickListener(v -> importFolder());
@@ -81,6 +86,12 @@ public class HomeActivity extends Activity {
         });
         findViewById(R.id.btnOpenResources).setOnClickListener(v -> {
             startActivity(new Intent(this, ResourcesActivity.class));
+        });
+        findViewById(R.id.btnOpenNotes).setOnClickListener(v -> {
+            startActivity(new Intent(this, NotesActivity.class));
+        });
+        notesSection.setOnClickListener(v -> {
+            startActivity(new Intent(this, NotesActivity.class));
         });
     }
 
@@ -161,13 +172,24 @@ public class HomeActivity extends Activity {
 
     private void refreshResources() {
         List<UserResource> resources = resourceDao.getAll();
-        boolean hasResources = !resources.isEmpty();
-        resourcesSection.setVisibility(hasResources ? View.VISIBLE : View.GONE);
-        emptyResources.setVisibility(View.VISIBLE);
-        if (hasResources) {
-            resourceList.setAdapter(new com.biblia.estudo.ui.library.ResourceListAdapter(this, resources));
+        resourcesSection.setVisibility(View.VISIBLE);
+        if (resources.isEmpty()) {
+            emptyResources.setVisibility(View.VISIBLE);
+            resourceList.setVisibility(View.GONE);
+        } else {
             emptyResources.setVisibility(View.GONE);
+            resourceList.setVisibility(View.VISIBLE);
+            resourceList.setAdapter(new com.biblia.estudo.ui.library.ResourceListAdapter(this, resources));
         }
+    }
+
+    private void setupNotes() {
+        notesSection.setOnClickListener(v -> {
+            startActivity(new Intent(this, NotesActivity.class));
+        });
+        notesPreview.setOnClickListener(v -> {
+            startActivity(new Intent(this, NotesActivity.class));
+        });
     }
 
     private void importFile() {

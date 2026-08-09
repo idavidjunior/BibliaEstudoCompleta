@@ -2,6 +2,7 @@ package com.biblia.estudo.data;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
@@ -15,7 +16,7 @@ public class DatabaseManager {
 
     private static final String PREFS_NAME = "db_manager_prefs";
     private static final String KEY_DB_VERSION = "db_copied_version";
-    private static final int CURRENT_DB_VERSION = 6;
+    private static final int CURRENT_DB_VERSION = 7;
 
     private static DatabaseManager instance;
     private Context context;
@@ -48,6 +49,10 @@ public class DatabaseManager {
         copyPrepopulatedDb("referencias.db");
         copyPrepopulatedDb("indices.db");
 
+        // Run migrations after copying
+        SQLiteDatabase bibleDb = new BibleDatabaseHelper(context).getWritableDatabase();
+        migrateBibleDatabase(bibleDb);
+
         if (copiedVersion < CURRENT_DB_VERSION) {
             prefs.edit().putInt(KEY_DB_VERSION, CURRENT_DB_VERSION).apply();
         }
@@ -79,6 +84,26 @@ public class DatabaseManager {
             while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
             in.close();
             out.close();
+        } catch (Exception ignored) {}
+    }
+
+    private void migrateBibleDatabase(SQLiteDatabase db) {
+        try {
+            Cursor c = db.rawQuery("PRAGMA table_info(highlights)", null);
+            boolean hasCreatedAt = false;
+            if (c != null) {
+                while (c.moveToNext()) {
+                    String colName = c.getString(c.getColumnIndexOrThrow("name"));
+                    if ("created_at".equals(colName)) {
+                        hasCreatedAt = true;
+                        break;
+                    }
+                }
+                c.close();
+            }
+            if (!hasCreatedAt) {
+                db.execSQL("ALTER TABLE highlights ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0");
+            }
         } catch (Exception ignored) {}
     }
 
