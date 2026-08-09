@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -21,24 +20,30 @@ import com.biblia.estudo.data.ResourceFolderDao;
 import com.biblia.estudo.data.UserResourceDao;
 import com.biblia.estudo.model.ResourceFolder;
 import com.biblia.estudo.model.UserResource;
-import com.biblia.estudo.utils.NavigationHelper;
+import com.biblia.estudo.ui.library.ResourceListAdapter;
+import com.biblia.estudo.utils.ResourceImportMenu;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 
 public class ResourcesActivity extends Activity {
 
     private static final int REQUEST_FILE = 2001;
     private static final int REQUEST_FOLDER = 2002;
+    private static final long BACK_ITEM_ID = -999L;
 
     private LinearLayout foldersContainer;
     private ListView filesList;
-    private TextView emptyText, folderTitle;
+    private TextView emptyText, folderTitle, btnBack, btnImport, btnSort;
 
     private UserResourceDao resourceDao;
     private ResourceFolderDao folderDao;
-    private long currentFolderId = -2; // -2 = all, -1 = uncategorized
-    private String currentFolderName = "Todos os arquivos";
+    private long currentFolderId = -2; // -2 = raiz, -1 = sem pasta
+    private Deque<Long> folderStack = new ArrayDeque<>();
+    private boolean materializing = false;
+    private int currentSort = UserResourceDao.SORT_NAME;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,27 +59,231 @@ public class ResourcesActivity extends Activity {
         filesList = findViewById(R.id.filesList);
         emptyText = findViewById(R.id.emptyText);
         folderTitle = findViewById(R.id.folderTitle);
+        btnBack = findViewById(R.id.btnBack);
+        btnImport = findViewById(R.id.btnImport);
+        btnSort = findViewById(R.id.btnSort);
 
-        NavigationHelper.setupBackButton(this);
+        currentSort = getPreferences(MODE_PRIVATE).getInt("sort_order", UserResourceDao.SORT_NAME);
 
-        findViewById(R.id.btnAddFile).setOnClickListener(v -> importFile());
-        findViewById(R.id.btnAddFolder).setOnClickListener(v -> showNewFolderDialog());
+        btnBack.setOnClickListener(v -> goUp());
+        btnImport.setOnClickListener(v ->
+                ResourceImportMenu.show(this, this::importFile, this::importFolder, this::createFolder));
+        btnSort.setOnClickListener(v -> showSortDialog());
         refreshFolders();
+        showRoot();
+    }
+
+    /** Cria uma pasta local (legado) na biblioteca. */
+    private void createFolder() {
+        EditText input = new EditText(this);
+        input.setHint("Nome da pasta");
+        input.setPadding(40, 20, 40, 20);
+        new AlertDialog.Builder(this)
+                .setTitle("Criar Nova Pasta")
+                .setView(input)
+                .setPositiveButton("Criar", (dialog, which) -> {
+                    String name = input.getText().toString().trim();
+                    if (name.isEmpty()) {
+                        Toast.makeText(this, "Digite um nome para a pasta", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    ResourceFolder folder = new ResourceFolder();
+                    folder.setName(name);
+                    folder.setCreatedAt(System.currentTimeMillis());
+                    folderDao.insert(folder);
+                    refreshFolders();
+                    Toast.makeText(this, "Pasta '" + name + "' criada", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void showSortDialog() {
+        String[] options = {"Nome", "Tipo", "Tamanho", "Data"};
+        new AlertDialog.Builder(this)
+                .setTitle("Ordenar por")
+                .setSingleChoiceItems(options, currentSort, (dialog, which) -> {
+                    currentSort = which;
+                    getPreferences(MODE_PRIVATE).edit().putInt("sort_order", currentSort).apply();
+                    dialog.dismiss();
+                    refreshFiles();
+                })
+                .show();
+    }
+
+    // ---------- Navegação ----------
+
+    private void showRoot() {
+        folderStack.clear();
+        currentFolderId = -2;
         refreshFiles();
     }
+
+    private void goUp() {
+        if (currentFolderId == -2) {
+            finish();
+            return;
+        }
+        if (currentFolderId >= 0 && isTreeFolder(currentFolderId)) {
+            if (!folderStack.isEmpty()) {
+                currentFolderId = folderStack.pop();
+            } else {
+                currentFolderId = -2;
+            }
+            refreshFiles();
+            return;
+        }
+        currentFolderId = -2;
+        refreshFiles();
+    }
+
+    private void enterFolder(UserResource folder) {
+        if (currentFolderId >= 0) folderStack.push(currentFolderId);
+        currentFolderId = folder.getId();
+        refreshFiles();
+    }
+
+    private boolean isTreeFolder(long id) {
+        UserResource r = resourceDao.getById(id);
+        return r != null && r.isReferencedFolder();
+    }
+
+    private long targetParentId() {
+        if (currentFolderId >= 0 && isTreeFolder(currentFolderId)) return currentFolderId;
+        return 0;
+    }
+
+    // ---------- Listagem ----------
+
+    private void refreshFiles() {
+        UserResource tree = null;
+        if (currentFolderId >= 0) {
+            tree = resourceDao.getById(currentFolderId);
+        }
+
+        List<UserResource> items;
+        String title;
+        if (tree != null && tree.isReferencedFolder()) {
+            items = loadTreeChildren(tree);
+            title = "📂  " + tree.getTitle();
+        } else if (currentFolderId == -2) {
+            items = loadRootItems();
+            title = "Todos os arquivos";
+        } else if (currentFolderId == -1) {
+            items = resourceDao.getByFolder(-1, currentSort);
+            title = "Sem pasta";
+        } else {
+            items = resourceDao.getByFolder(currentFolderId, currentSort);
+            ResourceFolder f = folderDao.getById(currentFolderId);
+            title = f != null ? (f.getIcon() + "  " + f.getName()) : "Pasta";
+        }
+
+        folderTitle.setText(title);
+        emptyText.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
+        emptyText.setText(items.isEmpty() ? (materializing ? "Carregando..." : "Nenhum arquivo aqui") : "");
+
+        ResourceListAdapter adapter = new ResourceListAdapter(this, items, resourceDao);
+        filesList.setAdapter(adapter);
+
+        filesList.setOnItemClickListener((parent, view, position, id) -> {
+            UserResource res = adapter.getItem(position);
+            if (res.getId() == BACK_ITEM_ID) {
+                goUp();
+            } else if (res.isReferencedFolder()) {
+                enterFolder(res);
+            } else if (res.isLocalFolder()) {
+                enterFolder(res);
+            } else {
+                openFile(res);
+            }
+        });
+
+        filesList.setOnItemLongClickListener((parent, view, position, id) -> {
+            UserResource res = adapter.getItem(position);
+            if (res.getId() == BACK_ITEM_ID) return false;
+            showItemActions(res);
+            return true;
+        });
+    }
+
+    private List<UserResource> loadRootItems() {
+        List<UserResource> items = new ArrayList<>();
+        for (UserResource r : resourceDao.getRootResources(currentSort)) {
+            // Arquivos legados dentro de pastas locais continuam lá; não aparecem na raiz duplicados.
+            if (r.isReferencedFile() && r.getFolderId() >= 0) continue;
+            items.add(r);
+        }
+        materializeRootCounts(items);
+        return items;
+    }
+
+    /** Garante que pastas referenciadas tenham os filhos persistidos para exibir contagens reais. */
+    private void materializeRootCounts(List<UserResource> items) {
+        if (materializing) return;
+        boolean need = false;
+        for (UserResource r : items) {
+            if (r.isReferencedFolder()) {
+                int[] c = resourceDao.countChildren(r.getId());
+                if (c[0] + c[1] == 0) { need = true; break; }
+            }
+        }
+        if (!need) return;
+        materializing = true;
+        new Thread(() -> {
+            for (UserResource r : items) {
+                if (r.isReferencedFolder()) {
+                    int[] c = resourceDao.countChildren(r.getId());
+                    if (c[0] + c[1] == 0) {
+                        resourceDao.importChildrenForFolder(r.getId(), getContentResolver());
+                    }
+                }
+            }
+            runOnUiThread(() -> {
+                materializing = false;
+                refreshFiles();
+            });
+        }).start();
+    }
+
+    private List<UserResource> loadTreeChildren(UserResource folder) {
+        List<UserResource> children = resourceDao.getChildren(folder.getId(), currentSort);
+        if (children.isEmpty() && !materializing) {
+            materializing = true;
+            emptyText.setVisibility(View.VISIBLE);
+            emptyText.setText("Carregando...");
+            new Thread(() -> {
+                int n = resourceDao.importChildrenForFolder(folder.getId(), getContentResolver());
+                runOnUiThread(() -> {
+                    materializing = false;
+                    if (n > 0) {
+                        refreshFiles();
+                    } else {
+                        emptyText.setText("Pasta vazia");
+                    }
+                });
+            }).start();
+        }
+        List<UserResource> items = new ArrayList<>();
+        UserResource back = new UserResource();
+        back.setId(BACK_ITEM_ID);
+        back.setTitle("← Voltar");
+        back.setType(UserResource.TYPE_LOCAL_FOLDER);
+        items.add(back);
+        items.addAll(children);
+        return items;
+    }
+
+    // ---------- Pastas locais (legado) ----------
 
     private void refreshFolders() {
         foldersContainer.removeAllViews();
         List<ResourceFolder> folders = folderDao.getAll();
 
-        // Uncategorized button
-        View uncat = getLayoutInflater().inflate(R.layout.item_resource_folder, foldersContainer, false);
-        ((TextView) uncat.findViewById(android.R.id.text1)).setText("\uD83D\uDCE5  Sem pasta");
-        int uncatCount = resourceDao.countByFolder(-1);
-        ((TextView) uncat.findViewById(android.R.id.text2)).setText(uncatCount + " arquivos");
-        uncat.setOnClickListener(v -> showUncategorized());
-        uncat.setOnLongClickListener(v -> false);
-        foldersContainer.addView(uncat);
+        if (folders.isEmpty()) {
+            foldersContainer.setVisibility(View.GONE);
+            return;
+        }
+        foldersContainer.setVisibility(View.VISIBLE);
 
         for (ResourceFolder f : folders) {
             View v = getLayoutInflater().inflate(R.layout.item_resource_folder, foldersContainer, false);
@@ -83,7 +292,6 @@ public class ResourcesActivity extends Activity {
 
             v.setOnClickListener(click -> {
                 currentFolderId = f.getId();
-                currentFolderName = f.getName();
                 refreshFiles();
             });
 
@@ -96,289 +304,6 @@ public class ResourcesActivity extends Activity {
         }
     }
 
-    private void refreshFiles() {
-        List<UserResource> files;
-        boolean isReferencedFolder = false;
-        
-        if (currentFolderId == -2) {
-            // Show all files and referenced folders at root level
-            files = resourceDao.getAll();
-            folderTitle.setText("Todos os arquivos");
-        } else if (currentFolderId == -1) {
-            files = resourceDao.getByFolder(-1);
-            folderTitle.setText("Sem pasta");
-        } else if (currentFolderId < 0) {
-            // Special ID for referenced folders: -(type + 1000) or similar
-            // We'll handle referenced folders differently - use a special flag
-            // For now, treat as regular folder
-            files = resourceDao.getByFolder(currentFolderId);
-            ResourceFolder f = folderDao.getById(currentFolderId);
-            folderTitle.setText(f != null ? (f.getIcon() + "  " + f.getName()) : "Pasta");
-        } else {
-            // Check if this is a local folder or referenced folder
-            UserResource folderRes = resourceDao.getById(currentFolderId);
-            if (folderRes != null && folderRes.isReferencedFolder()) {
-                // This is a referenced folder - list its contents dynamically
-                isReferencedFolder = true;
-                refreshReferencedFolder(folderRes.getUri());
-                return;
-            }
-            
-            files = resourceDao.getByFolder(currentFolderId);
-            ResourceFolder f = folderDao.getById(currentFolderId);
-            folderTitle.setText(f != null ? (f.getIcon() + "  " + f.getName()) : "Pasta");
-        }
-
-        if (!isReferencedFolder) {
-            filesList.setAdapter(new com.biblia.estudo.ui.library.ResourceListAdapter(this, files));
-            emptyText.setVisibility(files.isEmpty() ? View.VISIBLE : View.GONE);
-            if (files.isEmpty()) emptyText.setText("Nenhum arquivo aqui");
-
-            filesList.setOnItemClickListener((parent, view, position, id) -> {
-                UserResource res = (UserResource) parent.getItemAtPosition(position);
-                
-                if (res.isReferencedFolder()) {
-                    // Navigate into referenced folder
-                    currentFolderId = res.getId();
-                    currentFolderName = res.getTitle();
-                    refreshFiles();
-                } else {
-                    try {
-                        Intent intent = new Intent(Intent.ACTION_VIEW);
-                        intent.setDataAndType(Uri.parse(res.getUri()), res.getMimeType());
-                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        startActivity(intent);
-                    } catch (Exception e) {
-                        Toast.makeText(this, "Erro ao abrir arquivo", Toast.LENGTH_SHORT).show();
-                    }
-                }
-            });
-            filesList.setOnItemLongClickListener((parent, view, position, id) -> {
-                UserResource res = (UserResource) parent.getItemAtPosition(position);
-                showFileActions(res);
-                return true;
-            });
-        }
-    }
-
-    private void showAllFiles() {
-        currentFolderId = -2;
-        currentFolderName = "Todos os arquivos";
-        refreshFiles();
-    }
-
-    private void refreshReferencedFolder(String folderUri) {
-        folderTitle.setText("Carregando...");
-        
-        new Thread(() -> {
-            try {
-                Uri treeUri = Uri.parse(folderUri);
-                android.database.Cursor c = getContentResolver().query(
-                        android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(treeUri,
-                                android.provider.DocumentsContract.getTreeDocumentId(treeUri)),
-                        new String[]{
-                                android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                                android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                                android.provider.DocumentsContract.Document.COLUMN_MIME_TYPE,
-                                android.provider.DocumentsContract.Document.COLUMN_SIZE},
-                        null, null, null);
-                
-                final List<UserResource> folderContents = new ArrayList<>();
-                
-                if (c != null) {
-                    while (c.moveToNext()) {
-                        String mime = c.getString(2);
-                        String docId = c.getString(0);
-                        String name = c.getString(1);
-                        long size = c.getLong(3);
-                        
-                        Uri childUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
-                        
-                        UserResource res = new UserResource();
-                        res.setTitle(name);
-                        res.setUri(childUri.toString());
-                        res.setMimeType(mime);
-                        res.setSize(size);
-                        res.setType(mime != null && mime.contains("vnd.android.document/directory") ? 
-                                UserResource.TYPE_REFERENCED_FOLDER : UserResource.TYPE_REFERENCED_FILE);
-                        res.setCreatedAt(System.currentTimeMillis());
-                        
-                        folderContents.add(res);
-                    }
-                    c.close();
-                }
-                
-                runOnUiThread(() -> {
-                    if (folderContents.isEmpty()) {
-                        emptyText.setVisibility(View.VISIBLE);
-                        emptyText.setText("Pasta vazia");
-                    } else {
-                        emptyText.setVisibility(View.GONE);
-                    }
-                    filesList.setAdapter(new com.biblia.estudo.ui.library.ResourceListAdapter(this, folderContents));
-                    
-                    filesList.setOnItemClickListener((parent, view, position, id) -> {
-                        UserResource res = (UserResource) parent.getItemAtPosition(position);
-                        if (res.isReferencedFolder()) {
-                            // Navigate deeper into subfolder
-                            refreshReferencedFolder(res.getUri());
-                        } else {
-                            try {
-                                Intent intent = new Intent(Intent.ACTION_VIEW);
-                                intent.setDataAndType(Uri.parse(res.getUri()), res.getMimeType());
-                                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                startActivity(intent);
-                            } catch (Exception e) {
-                                Toast.makeText(this, "Erro ao abrir arquivo", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    });
-                    filesList.setOnItemLongClickListener((parent, view, position, id) -> {
-                        UserResource res = (UserResource) parent.getItemAtPosition(position);
-                        showReferencedItemActions(res, folderUri);
-                        return true;
-                    });
-                });
-                
-            } catch (Exception e) {
-                runOnUiThread(() -> {
-                    Toast.makeText(this, "Erro ao acessar pasta: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    emptyText.setVisibility(View.VISIBLE);
-                    emptyText.setText("Erro ao acessar pasta");
-                });
-            }
-        }).start();
-    }
-
-    private void showReferencedItemActions(UserResource res, String parentFolderUri) {
-        String[] options;
-        if (res.isReferencedFolder()) {
-            options = new String[]{"Abrir", "Renomear", "Remover da biblioteca"};
-        } else {
-            options = new String[]{"Abrir", "Renomear", "Remover da biblioteca"};
-        }
-        
-        new AlertDialog.Builder(this)
-                .setTitle(res.getTitle())
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) {
-                        if (res.isReferencedFolder()) {
-                            refreshReferencedFolder(res.getUri());
-                        } else {
-                            try {
-                                Intent intent = new Intent(Intent.ACTION_VIEW);
-                                intent.setDataAndType(Uri.parse(res.getUri()), res.getMimeType());
-                                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                startActivity(intent);
-                            } catch (Exception e) {
-                                Toast.makeText(this, "Erro ao abrir arquivo", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    } else if (which == 1) {
-                        renameReferencedItem(res, parentFolderUri);
-                    } else if (which == 2) {
-                        // Just remove the reference from library
-                        resourceDao.deleteById(res.getId());
-                        refreshFiles();
-                        refreshFolders();
-                        Toast.makeText(this, "Referência removida da biblioteca", Toast.LENGTH_SHORT).show();
-                    }
-                }).show();
-    }
-
-    private void renameReferencedItem(UserResource res, String parentFolderUri) {
-        EditText input = new EditText(this);
-        input.setText(res.getTitle());
-        input.setPadding(40, 20, 40, 20);
-        new AlertDialog.Builder(this)
-                .setTitle("Renomear")
-                .setView(input)
-                .setPositiveButton("OK", (d, w) -> {
-                    String name = input.getText().toString().trim();
-                    if (!name.isEmpty()) {
-                        // Update in our local storage
-                        SQLiteDatabase db = BibliaApplication.getDatabaseManager().getBibleDatabase();
-                        db.execSQL("UPDATE user_resources SET title=? WHERE _id=?",
-                                new String[]{name, String.valueOf(res.getId())});
-                        refreshFiles();
-                        Toast.makeText(this, "Renomeado", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
-    }
-
-    private void showUncategorized() {
-        currentFolderId = -1;
-        currentFolderName = "Sem pasta";
-        refreshFiles();
-    }
-
-    private void showFileActions(UserResource res) {
-        String[] options = {"Mover para pasta...", "Renomear", "Excluir"};
-        new AlertDialog.Builder(this)
-                .setTitle(res.getTitle())
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) moveFile(res);
-                    else if (which == 1) renameFile(res);
-                    else {
-                        resourceDao.deleteById(res.getId());
-                        refreshFiles();
-                        refreshFolders();
-                        Toast.makeText(this, "Excluído", Toast.LENGTH_SHORT).show();
-                    }
-                }).show();
-    }
-
-    private void moveFile(UserResource res) {
-        List<ResourceFolder> folders = folderDao.getAll();
-        if (folders.isEmpty()) {
-            Toast.makeText(this, "Crie uma pasta primeiro", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String[] names = new String[folders.size() + 1];
-        final long[] ids = new long[folders.size() + 1];
-        names[0] = "(Sem pasta)";
-        ids[0] = -1;
-        for (int i = 0; i < folders.size(); i++) {
-            names[i + 1] = folders.get(i).getName();
-            ids[i + 1] = folders.get(i).getId();
-        }
-        new AlertDialog.Builder(this)
-                .setTitle("Mover: " + res.getTitle())
-                .setItems(names, (dialog, which) -> {
-                    resourceDao.moveToFolder(res.getId(), ids[which]);
-                    refreshFiles();
-                    refreshFolders();
-                }).show();
-    }
-
-    private void renameFile(UserResource res) {
-        EditText input = new EditText(this);
-        input.setText(res.getTitle());
-        input.setPadding(40, 20, 40, 20);
-        new AlertDialog.Builder(this)
-                .setTitle("Renomear")
-                .setView(input)
-                .setPositiveButton("OK", (d, w) -> {
-                    String name = input.getText().toString().trim();
-                    if (!name.isEmpty()) {
-                        com.biblia.estudo.data.UserResourceDao dao = resourceDao;
-                        android.content.ContentValues cv = new android.content.ContentValues();
-                        cv.put("title", name);
-                        dao.getClass(); // access db through method
-                        // Use raw query for simplicity
-                        SQLiteDatabase db = BibliaApplication.getDatabaseManager().getBibleDatabase();
-                        db.execSQL("UPDATE user_resources SET title=? WHERE _id=?",
-                                new String[]{name, String.valueOf(res.getId())});
-                        refreshFiles();
-                        refreshFolders();
-                    }
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
-    }
-
     private void showFolderActions(ResourceFolder f) {
         String[] options = {"Renomear pasta", "Excluir pasta"};
         new AlertDialog.Builder(this)
@@ -388,7 +313,7 @@ public class ResourcesActivity extends Activity {
                     else {
                         folderDao.delete(f.getId());
                         refreshFolders();
-                        if (currentFolderId == f.getId()) showAllFiles();
+                        if (currentFolderId == f.getId()) showRoot();
                         Toast.makeText(this, "Pasta excluída", Toast.LENGTH_SHORT).show();
                     }
                 }).show();
@@ -413,33 +338,112 @@ public class ResourcesActivity extends Activity {
                 .show();
     }
 
-    private void showNewFolderDialog() {
+    // ---------- Ações de itens (referências) ----------
+
+    private void showItemActions(UserResource res) {
+        if (res.isReferencedFolder()) {
+            showReferencedFolderActions(res);
+        } else {
+            showReferencedFileActions(res);
+        }
+    }
+
+    private void showReferencedFolderActions(UserResource res) {
+        String[] options = {"Abrir", "Renomear", "Remover da biblioteca"};
+        new AlertDialog.Builder(this)
+                .setTitle(res.getTitle())
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        enterFolder(res);
+                    } else if (which == 1) {
+                        renameItem(res);
+                    } else {
+                        removeSubtree(res);
+                    }
+                }).show();
+    }
+
+    private void showReferencedFileActions(UserResource res) {
+        String[] options = {"Abrir", "Renomear", "Remover da biblioteca"};
+        new AlertDialog.Builder(this)
+                .setTitle(res.getTitle())
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        openFile(res);
+                    } else if (which == 1) {
+                        renameItem(res);
+                    } else {
+                        resourceDao.deleteById(res.getId());
+                        refreshFiles();
+                        refreshFolders();
+                        Toast.makeText(this, "Referência removida da biblioteca", Toast.LENGTH_SHORT).show();
+                    }
+                }).show();
+    }
+
+    /** Remove a pasta e todos os descendentes APENAS da biblioteca (as referências). */
+    private void removeSubtree(UserResource res) {
+        new AlertDialog.Builder(this)
+                .setTitle("Remover da biblioteca?")
+                .setMessage("A pasta \"" + res.getTitle() + "\" e todo o seu conteúdo serão removidos apenas da biblioteca. Os arquivos originais no dispositivo não são afetados.")
+                .setPositiveButton("Remover", (d, w) -> {
+                    resourceDao.deleteSubtree(res.getId());
+                    folderStack.remove(res.getId());
+                    if (currentFolderId == res.getId()) {
+                        currentFolderId = folderStack.isEmpty() ? -2 : folderStack.pop();
+                    }
+                    refreshFiles();
+                    refreshFolders();
+                    Toast.makeText(this, "Referência removida da biblioteca", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void renameItem(UserResource res) {
         EditText input = new EditText(this);
-        input.setHint("Nome da pasta");
+        input.setText(res.getTitle());
         input.setPadding(40, 20, 40, 20);
         new AlertDialog.Builder(this)
-                .setTitle("Nova pasta")
+                .setTitle("Renomear")
                 .setView(input)
-                .setPositiveButton("Criar", (d, w) -> {
+                .setPositiveButton("OK", (d, w) -> {
                     String name = input.getText().toString().trim();
                     if (!name.isEmpty()) {
-                        ResourceFolder f = new ResourceFolder();
-                        f.setName(name);
-                        f.setIcon("\uD83D\uDCC1");
-                        folderDao.insert(f);
+                        resourceDao.rename(res.getId(), name);
+                        refreshFiles();
                         refreshFolders();
-                        Toast.makeText(this, "Pasta criada", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .setNegativeButton("Cancelar", null)
                 .show();
     }
 
+    private void openFile(UserResource res) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            intent.setDataAndType(Uri.parse(res.getUri()), res.getMimeType());
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, "Erro ao abrir arquivo", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    // ---------- Importação ----------
+
     private void importFile() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         startActivityForResult(intent, REQUEST_FILE);
+    }
+
+    private void importFolder() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(intent, REQUEST_FOLDER);
     }
 
     @Override
@@ -448,10 +452,19 @@ public class ResourcesActivity extends Activity {
         if (resultCode != RESULT_OK || data == null) return;
 
         if (requestCode == REQUEST_FILE) {
-            Uri uri = data.getData();
-            if (uri == null) return;
-            try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); } catch (Exception ignored) {}
-            addResource(uri);
+            if (data.getData() != null) {
+                Uri uri = data.getData();
+                try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); } catch (Exception ignored) {}
+                addResource(uri);
+            } else if (data.getClipData() != null) {
+                int count = data.getClipData().getItemCount();
+                for (int i = 0; i < count; i++) {
+                    Uri uri = data.getClipData().getItemAt(i).getUri();
+                    try { getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION); } catch (Exception ignored) {}
+                    addResource(uri);
+                }
+                Toast.makeText(this, count + " arquivo(s) importado(s)", Toast.LENGTH_SHORT).show();
+            }
         } else if (requestCode == REQUEST_FOLDER) {
             Uri treeUri = data.getData();
             if (treeUri == null) return;
@@ -470,7 +483,14 @@ public class ResourcesActivity extends Activity {
         res.setUri(uri.toString());
         res.setMimeType(mime);
         res.setSize(size);
-        res.setFolderId(currentFolderId >= 0 ? currentFolderId : -1);
+        res.setType(UserResource.TYPE_REFERENCED_FILE);
+        if (currentFolderId >= 0 && isTreeFolder(currentFolderId)) {
+            res.setParentId(currentFolderId);
+            res.setFolderId(-1);
+        } else {
+            res.setParentId(0);
+            res.setFolderId(currentFolderId >= 0 ? currentFolderId : -1);
+        }
         res.setCreatedAt(System.currentTimeMillis());
         resourceDao.insert(res);
         refreshFiles();
@@ -478,45 +498,20 @@ public class ResourcesActivity extends Activity {
         Toast.makeText(this, "Importado: " + title, Toast.LENGTH_SHORT).show();
     }
 
+    /** Importa a árvore inteira da pasta escolhida (subpastas + arquivos), preservando nomes. */
     private void importFolderContents(Uri treeUri) {
-        try {
-            android.database.Cursor c = getContentResolver().query(
-                    android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(treeUri,
-                            android.provider.DocumentsContract.getTreeDocumentId(treeUri)),
-                    new String[]{
-                            android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                            android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                            android.provider.DocumentsContract.Document.COLUMN_MIME_TYPE,
-                            android.provider.DocumentsContract.Document.COLUMN_SIZE},
-                    null, null, null);
-            if (c != null) {
-                int count = 0;
-                while (c.moveToNext()) {
-                    String mime = c.getString(2);
-                    if (mime != null && !mime.contains("vnd.android.document/directory")) {
-                        String docId = c.getString(0);
-                        Uri childUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
-                        String name = c.getString(1);
-                        long size = c.getLong(3);
-                        UserResource res = new UserResource();
-                        res.setTitle(name);
-                        res.setUri(childUri.toString());
-                        res.setMimeType(mime);
-                        res.setSize(size);
-                        res.setFolderId(currentFolderId >= 0 ? currentFolderId : -1);
-                        res.setCreatedAt(System.currentTimeMillis());
-                        resourceDao.insert(res);
-                        count++;
-                    }
+        new Thread(() -> {
+            long id = resourceDao.importFolderTree(getContentResolver(), treeUri, targetParentId());
+            runOnUiThread(() -> {
+                if (id > 0) {
+                    refreshFiles();
+                    refreshFolders();
+                    Toast.makeText(this, "Pasta importada para a biblioteca", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Erro ao importar pasta", Toast.LENGTH_SHORT).show();
                 }
-                c.close();
-                refreshFiles();
-                refreshFolders();
-                Toast.makeText(this, count + " arquivos importados", Toast.LENGTH_SHORT).show();
-            }
-        } catch (Exception e) {
-            Toast.makeText(this, "Erro ao importar pasta", Toast.LENGTH_SHORT).show();
-        }
+            });
+        }).start();
     }
 
     private String extractFileName(Uri uri) {

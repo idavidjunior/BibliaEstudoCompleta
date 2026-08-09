@@ -7,6 +7,7 @@ public class UserResource {
     private String mimeType;
     private long size;
     private long folderId = -1;
+    private long parentId = 0; // 0 = raiz da biblioteca; >0 = id de pasta referenciada pai
     private long createdAt;
     private int type; // 0 = REFERENCED_FILE, 1 = REFERENCED_FOLDER, 2 = LOCAL_FOLDER
 
@@ -26,6 +27,8 @@ public class UserResource {
     public void setSize(long size) { this.size = size; }
     public long getFolderId() { return folderId; }
     public void setFolderId(long folderId) { this.folderId = folderId; }
+    public long getParentId() { return parentId; }
+    public void setParentId(long parentId) { this.parentId = parentId; }
     public long getCreatedAt() { return createdAt; }
     public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
     public int getType() { return type; }

@@ -39,6 +39,18 @@
                 android:textStyle="bold"
                 android:gravity="center" />
 
+            <TextView
+                android:id="@+id/btnSort"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⇅"
+                android:textSize="22sp"
+                android:textColor="@android:color/white"
+                android:padding="8dp"
+                android:contentDescription="Ordenar"
+                android:clickable="true"
+                android:background="?android:attr/selectableItemBackgroundBorderless" />
+
         </LinearLayout>
 
     </Toolbar>
@@ -51,30 +63,18 @@
         android:elevation="2dp">
 
         <TextView
-            android:id="@+id/btnAddFile"
+            android:id="@+id/btnImport"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:gravity="center"
-            android:text="+ Arquivo"
+            android:text="+ IMPORTAR"
             android:textSize="14sp"
-            android:textColor="@color/accent"
             android:textStyle="bold"
-            android:clickable="true"
-            android:background="@drawable/nav_item_bg" />
-
-        <TextView
-            android:id="@+id/btnAddFolder"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
+            android:textColor="@color/primary"
             android:gravity="center"
-            android:text="+ Pasta"
-            android:textSize="14sp"
-            android:textColor="@color/accent"
-            android:textStyle="bold"
+            android:padding="8dp"
             android:clickable="true"
-            android:background="@drawable/nav_item_bg" />
+            android:background="?android:attr/selectableItemBackgroundBorderless" />
 
     </LinearLayout>
 

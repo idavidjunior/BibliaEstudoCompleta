@@ -29,12 +29,12 @@ import com.biblia.estudo.ui.bible.BibleReaderActivity;
 import com.biblia.estudo.ui.notes.NotesActivity;
 import com.biblia.estudo.ui.resources.ResourcesActivity;
 import com.biblia.estudo.utils.NavigationHelper;
+import com.biblia.estudo.utils.ResourceImportMenu;
 
 import java.util.List;
 
 public class HomeActivity extends Activity {
 
-    private static final int REQUEST_IMPORT_FILE = 1001;
     private static final int REQUEST_IMPORT_FOLDER = 1002;
     private static final int REQUEST_IMPORT_MULTIPLE_FILES = 1003;
 
@@ -82,7 +82,8 @@ public class HomeActivity extends Activity {
         setupResources();
         setupNotes();
 
-        findViewById(R.id.btnImport).setOnClickListener(v -> showImportMenu());
+        findViewById(R.id.btnImport).setOnClickListener(v ->
+                ResourceImportMenu.show(this, this::importFile, this::importFolder, this::createFolder));
         findViewById(R.id.resourcesHeader).setOnClickListener(v -> {
             startActivity(new Intent(this, ResourcesActivity.class));
         });
@@ -95,24 +96,6 @@ public class HomeActivity extends Activity {
         notesSection.setOnClickListener(v -> {
             startActivity(new Intent(this, NotesActivity.class));
         });
-    }
-
-    private void showImportMenu() {
-        String[] options = {
-                "📄 Importar Arquivo",
-                "📂 Importar Pasta",
-                "📁 Criar Pasta"
-        };
-        new AlertDialog.Builder(this)
-                .setTitle("+ IMPORTAR")
-                .setItems(options, (dialog, which) -> {
-                    switch (which) {
-                        case 0: importFile(); break;
-                        case 1: importFolder(); break;
-                        case 2: createFolder(); break;
-                    }
-                })
-                .show();
     }
 
     private void createFolder() {
@@ -208,9 +191,13 @@ public class HomeActivity extends Activity {
         });
         resourceList.setOnItemLongClickListener((parent, view, position, id) -> {
             UserResource res = (UserResource) parent.getItemAtPosition(position);
-            resourceDao.deleteById(res.getId());
+            if (res.isReferencedFolder()) {
+                resourceDao.deleteSubtree(res.getId());
+            } else {
+                resourceDao.deleteById(res.getId());
+            }
             refreshResources();
-            Toast.makeText(this, "Removido: " + res.getTitle(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Referência removida da biblioteca", Toast.LENGTH_SHORT).show();
             return true;
         });
     }
@@ -224,7 +211,7 @@ public class HomeActivity extends Activity {
         } else {
             emptyResources.setVisibility(View.GONE);
             resourceList.setVisibility(View.VISIBLE);
-            resourceList.setAdapter(new com.biblia.estudo.ui.library.ResourceListAdapter(this, resources));
+            resourceList.setAdapter(new com.biblia.estudo.ui.library.ResourceListAdapter(this, resources, resourceDao));
         }
     }
 
@@ -247,6 +234,7 @@ public class HomeActivity extends Activity {
 
     private void importFolder() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         startActivityForResult(intent, REQUEST_IMPORT_FOLDER);
     }
 
@@ -257,21 +245,11 @@ public class HomeActivity extends Activity {
 
         if (requestCode == REQUEST_IMPORT_MULTIPLE_FILES) {
             if (data.getData() != null) {
-                // Single file selected
-                Uri uri = data.getData();
-                try {
-                    getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                } catch (Exception ignored) {}
-                addReferencedFile(uri);
+                addReferencedFile(data.getData());
             } else if (data.getClipData() != null) {
-                // Multiple files selected
                 int count = data.getClipData().getItemCount();
                 for (int i = 0; i < count; i++) {
-                    Uri uri = data.getClipData().getItemAt(i).getUri();
-                    try {
-                        getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    } catch (Exception ignored) {}
-                    addReferencedFile(uri);
+                    addReferencedFile(data.getClipData().getItemAt(i).getUri());
                 }
                 Toast.makeText(this, count + " arquivo(s) importado(s)", Toast.LENGTH_SHORT).show();
             }
@@ -286,61 +264,38 @@ public class HomeActivity extends Activity {
         }
     }
 
+    /** Importa um arquivo individual como referência na biblioteca. */
     private void addReferencedFile(Uri uri) {
+        try {
+            getContentResolver().takePersistableUriPermission(uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (Exception ignored) {}
+
         if (resourceDao.existsUri(uri.toString(), UserResource.TYPE_REFERENCED_FILE)) {
             Toast.makeText(this, "Arquivo já está na biblioteca", Toast.LENGTH_SHORT).show();
             return;
         }
+
         String title = extractFileName(uri);
         String mime = getContentResolver().getType(uri);
         if (mime == null) mime = "application/octet-stream";
-        long size = extractFileSize(uri);
 
         UserResource res = new UserResource();
         res.setTitle(title);
         res.setUri(uri.toString());
         res.setMimeType(mime);
-        res.setSize(size);
+        res.setSize(extractFileSize(uri));
         res.setType(UserResource.TYPE_REFERENCED_FILE);
+        res.setFolderId(-1);
+        res.setParentId(0);
         res.setCreatedAt(System.currentTimeMillis());
         resourceDao.insert(res);
         refreshResources();
-        Toast.makeText(this, "Importado: " + title, Toast.LENGTH_SHORT).show();
-    }
-
-    private void addReferencedFolder(Uri uri) {
-        if (resourceDao.existsUri(uri.toString(), UserResource.TYPE_REFERENCED_FOLDER)) {
-            Toast.makeText(this, "Pasta já está na biblioteca", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String title = extractFolderName(uri);
-
-        UserResource res = new UserResource();
-        res.setTitle(title);
-        res.setUri(uri.toString());
-        res.setMimeType("vnd.android.document/directory");
-        res.setSize(0);
-        res.setType(UserResource.TYPE_REFERENCED_FOLDER);
-        res.setCreatedAt(System.currentTimeMillis());
-        resourceDao.insert(res);
-        refreshResources();
-        Toast.makeText(this, "Pasta importada: " + title, Toast.LENGTH_SHORT).show();
-    }
-
-    private String extractFolderName(Uri uri) {
-        String name = "Pasta";
-        try (android.database.Cursor c = getContentResolver().query(uri, null, null, null, null)) {
-            if (c != null && c.moveToFirst()) {
-                int idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                if (idx >= 0) name = c.getString(idx);
-            }
-        } catch (Exception ignored) {}
-        if (name == null || name.isEmpty()) name = uri.getLastPathSegment();
-        return name != null ? name : "Pasta";
+        Toast.makeText(this, "Arquivo importado", Toast.LENGTH_SHORT).show();
     }
 
     private String extractFileName(Uri uri) {
-        String name = "Arquivo";
+        String name = null;
         try (android.database.Cursor c = getContentResolver().query(uri, null, null, null, null)) {
             if (c != null && c.moveToFirst()) {
                 int idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME);
@@ -360,5 +315,25 @@ public class HomeActivity extends Activity {
             }
         } catch (Exception ignored) {}
         return size;
+    }
+
+    /** Importa a pasta escolhida com toda a árvore (subpastas + arquivos), nomes reais. */
+    private void addReferencedFolder(Uri uri) {
+        if (resourceDao.existsUri(uri.toString(), UserResource.TYPE_REFERENCED_FOLDER)) {
+            Toast.makeText(this, "Pasta já está na biblioteca", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Toast.makeText(this, "Importando pasta...", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            final long id = resourceDao.importFolderTree(getContentResolver(), uri, 0);
+            runOnUiThread(() -> {
+                if (id > 0) {
+                    refreshResources();
+                    Toast.makeText(this, "Pasta importada com subpastas", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Erro ao importar pasta", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }).start();
     }
 }
