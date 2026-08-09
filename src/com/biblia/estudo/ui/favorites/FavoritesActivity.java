@@ -412,6 +412,12 @@ public class FavoritesActivity extends Activity {
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadFavorites();
+    }
+
     public void removeFavorite(int position) {
         if (displayedFavorites != null && position >= 0 && position < displayedFavorites.size()) {
             Favorite fav = displayedFavorites.get(position);

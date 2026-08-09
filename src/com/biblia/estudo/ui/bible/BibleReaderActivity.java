@@ -282,20 +282,22 @@ public class BibleReaderActivity extends Activity {
         boolean hasNote = noteDao.getByVerse(bookId, currentChapter, currentVerse) != null;
         boolean isHl = highlightDao.isHighlighted(bookId, currentChapter, currentVerse);
 
-        String[] options = new String[4];
+        String[] options = new String[5];
         options[0] = isFav ? "★ Remover Favorito" : "☆ Favoritar";
-        options[1] = "📤 Compartilhar";
-        options[2] = hasNote ? "📝 Editar Nota" : "📝 Adicionar Nota";
-        options[3] = isHl ? "🎨 Remover Destaque" : "🎨 Destacar cor";
+        options[1] = "✨ Favoritar múltiplos";
+        options[2] = "📤 Compartilhar";
+        options[3] = hasNote ? "📝 Editar Nota" : "📝 Adicionar Nota";
+        options[4] = isHl ? "🎨 Remover Destaque" : "🎨 Destacar cor";
 
         new AlertDialog.Builder(this)
                 .setTitle(bookName + " " + currentChapter + ":" + verseNum)
                 .setItems(options, (dialog, which) -> {
                     switch (which) {
                         case 0: toggleFavorite(); break;
-                        case 1: shareCurrentVerse(); break;
-                        case 2: showNoteDialog(); break;
-                        case 3: showColorPicker(); break;
+                        case 1: showMultiFavoriteDialog(); break;
+                        case 2: shareCurrentVerse(); break;
+                        case 3: showNoteDialog(); break;
+                        case 4: showColorPicker(); break;
                     }
                 }).show();
     }
@@ -316,6 +318,55 @@ public class BibleReaderActivity extends Activity {
             favoriteDao.insert(fav);
             Toast.makeText(this, R.string.favorite_added, Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void showMultiFavoriteDialog() {
+        int totalVerses = verseDao.getVerseCount(bookId, currentChapter);
+        if (totalVerses == 0) {
+            totalVerses = 176; // fallback
+        }
+
+        boolean[] checkedItems = new boolean[totalVerses];
+        String[] verseLabels = new String[totalVerses];
+        List<Verse> allVerses = verseDao.getChapter(bookId, currentChapter);
+        for (int i = 0; i < allVerses.size(); i++) {
+            Verse v = allVerses.get(i);
+            verseLabels[i] = v.getVerseNumber() + ". " + (v.getText().length() > 60 ? v.getText().substring(0, 60) + "..." : v.getText());
+            checkedItems[i] = favoriteDao.isFavorite(bookId, currentChapter, v.getVerseNumber());
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Favoritar múltiplos - " + bookName + " " + currentChapter)
+                .setMultiChoiceItems(verseLabels, checkedItems, (dialog, which, isChecked) -> {
+                    checkedItems[which] = isChecked;
+                })
+                .setPositiveButton("Salvar", (dialog, which) -> {
+                    int added = 0, removed = 0;
+                    for (int i = 0; i < checkedItems.length; i++) {
+                        int verseNum = i + 1;
+                        boolean isFav = favoriteDao.isFavorite(bookId, currentChapter, verseNum);
+                        if (checkedItems[i] && !isFav) {
+                            Favorite fav = new Favorite();
+                            fav.setBookId(bookId);
+                            fav.setChapter(currentChapter);
+                            fav.setVerseNumber(verseNum);
+                            fav.setBookName(bookName);
+                            List<Verse> verses = verseDao.getVersesRange(bookId, currentChapter, verseNum, verseNum);
+                            if (!verses.isEmpty()) fav.setVerseText(verses.get(0).getText());
+                            favoriteDao.insert(fav);
+                            added++;
+                        } else if (!checkedItems[i] && isFav) {
+                            favoriteDao.deleteByReference(bookId, currentChapter, verseNum);
+                            removed++;
+                        }
+                    }
+                    String msg = "";
+                    if (added > 0) msg += added + " adicionado(s) ";
+                    if (removed > 0) msg += removed + " removido(s)";
+                    Toast.makeText(this, msg.trim(), Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private void shareCurrentVerse() {

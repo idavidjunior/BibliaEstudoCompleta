@@ -267,6 +267,20 @@
                             android:background="@drawable/nav_item_bg" />
 
                         <TextView
+                            android:id="@+id/btnCreateFolder"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:gravity="center"
+                            android:paddingLeft="12dp"
+                            android:paddingRight="12dp"
+                            android:text="Criar Pasta"
+                            android:textColor="@color/accent"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:clickable="true"
+                            android:background="@drawable/nav_item_bg" />
+
+                        <TextView
                             android:id="@+id/btnImportFolder"
                             android:layout_width="wrap_content"
                             android:layout_height="32dp"

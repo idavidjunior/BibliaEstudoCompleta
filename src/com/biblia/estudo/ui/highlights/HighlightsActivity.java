@@ -414,6 +414,12 @@ public class HighlightsActivity extends Activity {
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadHighlights();
+    }
+
     public void removeHighlight(int position) {
         if (displayedHighlights != null && position >= 0 && position < displayedHighlights.size()) {
             Highlight hl = displayedHighlights.get(position);

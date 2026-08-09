@@ -1,6 +1,7 @@
 package com.biblia.estudo.ui.library;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
@@ -17,6 +18,7 @@ import com.biblia.estudo.R;
 import com.biblia.estudo.app.BibliaApplication;
 import com.biblia.estudo.data.BookDao;
 import com.biblia.estudo.data.ReadingProgressDao;
+import com.biblia.estudo.data.ResourceFolderDao;
 import com.biblia.estudo.data.UserResourceDao;
 import com.biblia.estudo.data.VerseDao;
 import com.biblia.estudo.model.Book;
@@ -34,6 +36,7 @@ public class HomeActivity extends Activity {
 
     private static final int REQUEST_IMPORT_FILE = 1001;
     private static final int REQUEST_IMPORT_FOLDER = 1002;
+    private static final int REQUEST_IMPORT_MULTIPLE_FILES = 1003;
 
     private TextView lastReadingRef, lastReadingText;
     private Button btnContinue, btnStart;
@@ -81,6 +84,7 @@ public class HomeActivity extends Activity {
 
         findViewById(R.id.btnImportFile).setOnClickListener(v -> importFile());
         findViewById(R.id.btnImportFolder).setOnClickListener(v -> importFolder());
+        findViewById(R.id.btnCreateFolder).setOnClickListener(v -> createFolder());
         findViewById(R.id.resourcesHeader).setOnClickListener(v -> {
             startActivity(new Intent(this, ResourcesActivity.class));
         });
@@ -93,6 +97,31 @@ public class HomeActivity extends Activity {
         notesSection.setOnClickListener(v -> {
             startActivity(new Intent(this, NotesActivity.class));
         });
+    }
+
+    private void createFolder() {
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint("Nome da pasta");
+        input.setPadding(40, 20, 40, 20);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Criar Nova Pasta")
+                .setView(input)
+                .setPositiveButton("Criar", (dialog, which) -> {
+                    String name = input.getText().toString().trim();
+                    if (name.isEmpty()) {
+                        Toast.makeText(this, "Digite um nome para a pasta", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    com.biblia.estudo.model.ResourceFolder folder = new com.biblia.estudo.model.ResourceFolder();
+                    folder.setName(name);
+                    folder.setCreatedAt(System.currentTimeMillis());
+                    ResourceFolderDao folderDao = new ResourceFolderDao(BibliaApplication.getDatabaseManager().getBibleDatabase());
+                    folderDao.insert(folder);
+                    Toast.makeText(this, "Pasta '" + name + "' criada", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private void setupLastReading() {
@@ -196,7 +225,8 @@ public class HomeActivity extends Activity {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("*/*");
-        startActivityForResult(intent, REQUEST_IMPORT_FILE);
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        startActivityForResult(intent, REQUEST_IMPORT_MULTIPLE_FILES);
     }
 
     private void importFolder() {
@@ -209,13 +239,26 @@ public class HomeActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode != RESULT_OK || data == null) return;
 
-        if (requestCode == REQUEST_IMPORT_FILE) {
-            Uri uri = data.getData();
-            if (uri == null) return;
-            try {
-                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            } catch (Exception ignored) {}
-            addResource(uri);
+        if (requestCode == REQUEST_IMPORT_MULTIPLE_FILES) {
+            if (data.getData() != null) {
+                // Single file selected
+                Uri uri = data.getData();
+                try {
+                    getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                } catch (Exception ignored) {}
+                addResource(uri);
+            } else if (data.getClipData() != null) {
+                // Multiple files selected
+                int count = data.getClipData().getItemCount();
+                for (int i = 0; i < count; i++) {
+                    Uri uri = data.getClipData().getItemAt(i).getUri();
+                    try {
+                        getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    } catch (Exception ignored) {}
+                    addResource(uri);
+                }
+                Toast.makeText(this, count + " arquivo(s) importado(s)", Toast.LENGTH_SHORT).show();
+            }
         } else if (requestCode == REQUEST_IMPORT_FOLDER) {
             Uri treeUri = data.getData();
             if (treeUri == null) return;
