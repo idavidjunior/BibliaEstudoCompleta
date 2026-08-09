@@ -253,42 +253,14 @@
                             android:background="@drawable/nav_item_bg" />
 
                         <TextView
-                            android:id="@+id/btnImportFile"
+                            android:id="@+id/btnImport"
                             android:layout_width="wrap_content"
                             android:layout_height="32dp"
                             android:gravity="center"
                             android:paddingLeft="12dp"
                             android:paddingRight="12dp"
-                            android:text="+ Arquivo"
-                            android:textColor="@color/accent"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
-                            android:clickable="true"
-                            android:background="@drawable/nav_item_bg" />
-
-                        <TextView
-                            android:id="@+id/btnCreateFolder"
-                            android:layout_width="wrap_content"
-                            android:layout_height="32dp"
-                            android:gravity="center"
-                            android:paddingLeft="12dp"
-                            android:paddingRight="12dp"
-                            android:text="Criar Pasta"
-                            android:textColor="@color/accent"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
-                            android:clickable="true"
-                            android:background="@drawable/nav_item_bg" />
-
-                        <TextView
-                            android:id="@+id/btnImportFolder"
-                            android:layout_width="wrap_content"
-                            android:layout_height="32dp"
-                            android:gravity="center"
-                            android:paddingLeft="12dp"
-                            android:paddingRight="12dp"
-                            android:text="+ Pasta"
-                            android:textColor="@color/accent"
+                            android:text="+ IMPORTAR"
+                            android:textColor="@color/primary"
                             android:textSize="12sp"
                             android:textStyle="bold"
                             android:clickable="true"
@@ -308,7 +280,7 @@
                         android:id="@+id/emptyResources"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Nenhum recurso importado. Toque em + Arquivo ou + Pasta para adicionar."
+                        android:text="Nenhum recurso. Toque em + IMPORTAR para adicionar arquivos, pastas ou criar pastas."
                         android:textSize="13sp"
                         android:textColor="@color/text_secondary"
                         android:padding="16dp"

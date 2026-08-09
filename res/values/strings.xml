@@ -140,6 +140,15 @@
     <string name="confirm_delete_group">Excluir este grupo? Os itens voltarão para a raiz.</string>
     <string name="items_moved">%d item(ns) movido(s)</string>
 
+    <string name="import_menu">Importar</string>
+    <string name="import_file">Importar Arquivo</string>
+    <string name="import_folder">Importar Pasta</string>
+    <string name="create_folder">Criar Pasta</string>
+    <string name="reauthorize">Reautorizar</string>
+    <string name="remove_reference">Remover referência</string>
+    <string name="reference_broken">Referência quebrada</string>
+    <string name="reference_not_accessible">Não foi possível acessar este item. O arquivo ou pasta original pode ter sido movido ou excluído.</string>
+
     <string name="note_hint">Escreva sua anotação…</string>
     <string name="note_saved">Anotação salva</string>
     <string name="note_deleted">Anotação excluída</string>

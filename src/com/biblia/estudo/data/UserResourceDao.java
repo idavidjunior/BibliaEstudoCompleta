@@ -19,13 +19,16 @@ public class UserResourceDao {
         db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_NAME + " (" +
                 "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 "title TEXT NOT NULL," +
-                "uri TEXT NOT NULL UNIQUE," +
+                "uri TEXT NOT NULL," +
                 "mime_type TEXT," +
                 "file_size INTEGER DEFAULT 0," +
                 "folder_id INTEGER DEFAULT -1," +
-                "created_at INTEGER NOT NULL" +
+                "created_at INTEGER NOT NULL," +
+                "type INTEGER DEFAULT 0" +
                 ")");
         try { db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN folder_id INTEGER DEFAULT -1"); } catch (Exception ignored) {}
+        try { db.execSQL("ALTER TABLE " + TABLE_NAME + " ADD COLUMN type INTEGER DEFAULT 0"); } catch (Exception ignored) {}
+        try { db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_uri_type ON " + TABLE_NAME + " (uri, type)"); } catch (Exception ignored) {}
     }
 
     public long insert(UserResource res) {
@@ -36,17 +39,52 @@ public class UserResourceDao {
         cv.put("file_size", res.getSize());
         cv.put("folder_id", res.getFolderId());
         cv.put("created_at", res.getCreatedAt());
+        cv.put("type", res.getType());
         return db.insertWithOnConflict(TABLE_NAME, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     public List<UserResource> getAll() {
-        return getByFolder(-2);
+        return getByFolderAndType(-2, -1);
     }
 
     public List<UserResource> getByFolder(long folderId) {
+        return getByFolderAndType(folderId, -1);
+    }
+
+    public List<UserResource> getByType(int type) {
+        return getByFolderAndType(-2, type);
+    }
+
+    public List<UserResource> getReferencedFolders() {
         List<UserResource> list = new ArrayList<>();
-        String selection = folderId == -2 ? null : (folderId == -1 ? "(folder_id IS NULL OR folder_id=-1)" : "folder_id=?");
-        String[] args = folderId >= 0 ? new String[]{String.valueOf(folderId)} : null;
+        Cursor c = db.query(TABLE_NAME, null, "type=?", new String[]{String.valueOf(UserResource.TYPE_REFERENCED_FOLDER)}, null, null, "created_at DESC");
+        if (c != null) {
+            while (c.moveToNext()) list.add(cursorTo(c));
+            c.close();
+        }
+        return list;
+    }
+
+    public List<UserResource> getByFolderAndType(long folderId, int type) {
+        List<UserResource> list = new ArrayList<>();
+        String selection;
+        String[] args;
+        
+        if (folderId == -2 && type == -1) {
+            selection = null;
+            args = null;
+        } else if (folderId == -2) {
+            selection = "type=?";
+            args = new String[]{String.valueOf(type)};
+        } else if (type == -1) {
+            selection = folderId == -1 ? "(folder_id IS NULL OR folder_id=-1)" : "folder_id=?";
+            args = folderId >= 0 ? new String[]{String.valueOf(folderId)} : null;
+        } else {
+            String folderSel = folderId == -1 ? "(folder_id IS NULL OR folder_id=-1)" : "folder_id=?";
+            selection = folderSel + " AND type=?";
+            args = new String[]{folderId >= 0 ? String.valueOf(folderId) : "-1", String.valueOf(type)};
+        }
+        
         Cursor c = db.query(TABLE_NAME, null, selection, args, null, null, "created_at DESC");
         if (c != null) {
             while (c.moveToNext()) list.add(cursorTo(c));
@@ -84,6 +122,13 @@ public class UserResourceDao {
         return count;
     }
 
+    public boolean existsUri(String uri, int type) {
+        Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + TABLE_NAME + " WHERE uri=? AND type=?", new String[]{uri, String.valueOf(type)});
+        int count = 0;
+        if (c != null && c.moveToFirst()) { count = c.getInt(0); c.close(); }
+        return count > 0;
+    }
+
     private UserResource cursorTo(Cursor c) {
         UserResource r = new UserResource();
         r.setId(c.getLong(c.getColumnIndexOrThrow("_id")));
@@ -92,6 +137,7 @@ public class UserResourceDao {
         r.setMimeType(c.getString(c.getColumnIndexOrThrow("mime_type")));
         r.setSize(c.getLong(c.getColumnIndexOrThrow("file_size")));
         if (c.getColumnIndex("folder_id") >= 0) r.setFolderId(c.getLong(c.getColumnIndexOrThrow("folder_id")));
+        if (c.getColumnIndex("type") >= 0) r.setType(c.getInt(c.getColumnIndexOrThrow("type")));
         r.setCreatedAt(c.getLong(c.getColumnIndexOrThrow("created_at")));
         return r;
     }

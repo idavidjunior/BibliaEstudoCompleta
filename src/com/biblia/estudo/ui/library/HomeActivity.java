@@ -82,9 +82,7 @@ public class HomeActivity extends Activity {
         setupResources();
         setupNotes();
 
-        findViewById(R.id.btnImportFile).setOnClickListener(v -> importFile());
-        findViewById(R.id.btnImportFolder).setOnClickListener(v -> importFolder());
-        findViewById(R.id.btnCreateFolder).setOnClickListener(v -> createFolder());
+        findViewById(R.id.btnImport).setOnClickListener(v -> showImportMenu());
         findViewById(R.id.resourcesHeader).setOnClickListener(v -> {
             startActivity(new Intent(this, ResourcesActivity.class));
         });
@@ -97,6 +95,24 @@ public class HomeActivity extends Activity {
         notesSection.setOnClickListener(v -> {
             startActivity(new Intent(this, NotesActivity.class));
         });
+    }
+
+    private void showImportMenu() {
+        String[] options = {
+                "📄 Importar Arquivo",
+                "📂 Importar Pasta",
+                "📁 Criar Pasta"
+        };
+        new AlertDialog.Builder(this)
+                .setTitle("+ IMPORTAR")
+                .setItems(options, (dialog, which) -> {
+                    switch (which) {
+                        case 0: importFile(); break;
+                        case 1: importFolder(); break;
+                        case 2: createFolder(); break;
+                    }
+                })
+                .show();
     }
 
     private void createFolder() {
@@ -246,7 +262,7 @@ public class HomeActivity extends Activity {
                 try {
                     getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 } catch (Exception ignored) {}
-                addResource(uri);
+                addReferencedFile(uri);
             } else if (data.getClipData() != null) {
                 // Multiple files selected
                 int count = data.getClipData().getItemCount();
@@ -255,7 +271,7 @@ public class HomeActivity extends Activity {
                     try {
                         getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     } catch (Exception ignored) {}
-                    addResource(uri);
+                    addReferencedFile(uri);
                 }
                 Toast.makeText(this, count + " arquivo(s) importado(s)", Toast.LENGTH_SHORT).show();
             }
@@ -266,11 +282,15 @@ public class HomeActivity extends Activity {
                 getContentResolver().takePersistableUriPermission(treeUri,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION);
             } catch (Exception ignored) {}
-            importFolderContents(treeUri);
+            addReferencedFolder(treeUri);
         }
     }
 
-    private void addResource(Uri uri) {
+    private void addReferencedFile(Uri uri) {
+        if (resourceDao.existsUri(uri.toString(), UserResource.TYPE_REFERENCED_FILE)) {
+            Toast.makeText(this, "Arquivo já está na biblioteca", Toast.LENGTH_SHORT).show();
+            return;
+        }
         String title = extractFileName(uri);
         String mime = getContentResolver().getType(uri);
         if (mime == null) mime = "application/octet-stream";
@@ -281,62 +301,42 @@ public class HomeActivity extends Activity {
         res.setUri(uri.toString());
         res.setMimeType(mime);
         res.setSize(size);
+        res.setType(UserResource.TYPE_REFERENCED_FILE);
         res.setCreatedAt(System.currentTimeMillis());
         resourceDao.insert(res);
         refreshResources();
         Toast.makeText(this, "Importado: " + title, Toast.LENGTH_SHORT).show();
     }
 
-    private void importFolderContents(Uri treeUri) {
-        importFolderContentsRecursive(treeUri, "");
+    private void addReferencedFolder(Uri uri) {
+        if (resourceDao.existsUri(uri.toString(), UserResource.TYPE_REFERENCED_FOLDER)) {
+            Toast.makeText(this, "Pasta já está na biblioteca", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String title = extractFolderName(uri);
+
+        UserResource res = new UserResource();
+        res.setTitle(title);
+        res.setUri(uri.toString());
+        res.setMimeType("vnd.android.document/directory");
+        res.setSize(0);
+        res.setType(UserResource.TYPE_REFERENCED_FOLDER);
+        res.setCreatedAt(System.currentTimeMillis());
+        resourceDao.insert(res);
+        refreshResources();
+        Toast.makeText(this, "Pasta importada: " + title, Toast.LENGTH_SHORT).show();
     }
 
-    private void importFolderContentsRecursive(Uri treeUri, String parentPath) {
-        try {
-            android.database.Cursor c = getContentResolver().query(
-                    android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(treeUri,
-                            android.provider.DocumentsContract.getTreeDocumentId(treeUri)),
-                    new String[]{android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                            android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                            android.provider.DocumentsContract.Document.COLUMN_MIME_TYPE,
-                            android.provider.DocumentsContract.Document.COLUMN_SIZE},
-                    null, null, null);
-            if (c != null) {
-                int count = 0;
-                while (c.moveToNext()) {
-                    String mime = c.getString(2);
-                    String docId = c.getString(0);
-                    String name = c.getString(1);
-                    long size = c.getLong(3);
-
-                    Uri childUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
-
-                    if (mime != null && mime.contains("vnd.android.document/directory")) {
-                        // It's a subdirectory - recurse
-                        String newPath = parentPath.isEmpty() ? name : parentPath + "/" + name;
-                        importFolderContentsRecursive(childUri, newPath);
-                    } else {
-                        // It's a file - import with path
-                        UserResource res = new UserResource();
-                        String fullTitle = parentPath.isEmpty() ? name : parentPath + "/" + name;
-                        res.setTitle(fullTitle);
-                        res.setUri(childUri.toString());
-                        res.setMimeType(mime);
-                        res.setSize(size);
-                        res.setCreatedAt(System.currentTimeMillis());
-                        resourceDao.insert(res);
-                        count++;
-                    }
-                }
-                c.close();
-                if (parentPath.isEmpty()) {
-                    refreshResources();
-                    Toast.makeText(this, count + " arquivos importados da pasta", Toast.LENGTH_SHORT).show();
-                }
+    private String extractFolderName(Uri uri) {
+        String name = "Pasta";
+        try (android.database.Cursor c = getContentResolver().query(uri, null, null, null, null)) {
+            if (c != null && c.moveToFirst()) {
+                int idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (idx >= 0) name = c.getString(idx);
             }
-        } catch (Exception e) {
-            Toast.makeText(this, "Erro ao importar pasta", Toast.LENGTH_SHORT).show();
-        }
+        } catch (Exception ignored) {}
+        if (name == null || name.isEmpty()) name = uri.getLastPathSegment();
+        return name != null ? name : "Pasta";
     }
 
     private String extractFileName(Uri uri) {

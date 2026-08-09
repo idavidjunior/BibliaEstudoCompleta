@@ -23,6 +23,7 @@ import com.biblia.estudo.model.ResourceFolder;
 import com.biblia.estudo.model.UserResource;
 import com.biblia.estudo.utils.NavigationHelper;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ResourcesActivity extends Activity {
@@ -97,45 +98,214 @@ public class ResourcesActivity extends Activity {
 
     private void refreshFiles() {
         List<UserResource> files;
+        boolean isReferencedFolder = false;
+        
         if (currentFolderId == -2) {
+            // Show all files and referenced folders at root level
             files = resourceDao.getAll();
             folderTitle.setText("Todos os arquivos");
         } else if (currentFolderId == -1) {
             files = resourceDao.getByFolder(-1);
             folderTitle.setText("Sem pasta");
+        } else if (currentFolderId < 0) {
+            // Special ID for referenced folders: -(type + 1000) or similar
+            // We'll handle referenced folders differently - use a special flag
+            // For now, treat as regular folder
+            files = resourceDao.getByFolder(currentFolderId);
+            ResourceFolder f = folderDao.getById(currentFolderId);
+            folderTitle.setText(f != null ? (f.getIcon() + "  " + f.getName()) : "Pasta");
         } else {
+            // Check if this is a local folder or referenced folder
+            UserResource folderRes = resourceDao.getById(currentFolderId);
+            if (folderRes != null && folderRes.isReferencedFolder()) {
+                // This is a referenced folder - list its contents dynamically
+                isReferencedFolder = true;
+                refreshReferencedFolder(folderRes.getUri());
+                return;
+            }
+            
             files = resourceDao.getByFolder(currentFolderId);
             ResourceFolder f = folderDao.getById(currentFolderId);
             folderTitle.setText(f != null ? (f.getIcon() + "  " + f.getName()) : "Pasta");
         }
 
-        filesList.setAdapter(new com.biblia.estudo.ui.library.ResourceListAdapter(this, files));
-        emptyText.setVisibility(files.isEmpty() ? View.VISIBLE : View.GONE);
-        if (files.isEmpty()) emptyText.setText("Nenhum arquivo aqui");
+        if (!isReferencedFolder) {
+            filesList.setAdapter(new com.biblia.estudo.ui.library.ResourceListAdapter(this, files));
+            emptyText.setVisibility(files.isEmpty() ? View.VISIBLE : View.GONE);
+            if (files.isEmpty()) emptyText.setText("Nenhum arquivo aqui");
 
-        filesList.setAdapter(new com.biblia.estudo.ui.library.ResourceListAdapter(this, files));
-        filesList.setOnItemClickListener((parent, view, position, id) -> {
-            UserResource res = (UserResource) parent.getItemAtPosition(position);
-            try {
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setDataAndType(Uri.parse(res.getUri()), res.getMimeType());
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                startActivity(intent);
-            } catch (Exception e) {
-                Toast.makeText(this, "Erro ao abrir arquivo", Toast.LENGTH_SHORT).show();
-            }
-        });
-        filesList.setOnItemLongClickListener((parent, view, position, id) -> {
-            UserResource res = (UserResource) parent.getItemAtPosition(position);
-            showFileActions(res);
-            return true;
-        });
+            filesList.setOnItemClickListener((parent, view, position, id) -> {
+                UserResource res = (UserResource) parent.getItemAtPosition(position);
+                
+                if (res.isReferencedFolder()) {
+                    // Navigate into referenced folder
+                    currentFolderId = res.getId();
+                    currentFolderName = res.getTitle();
+                    refreshFiles();
+                } else {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setDataAndType(Uri.parse(res.getUri()), res.getMimeType());
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Erro ao abrir arquivo", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+            filesList.setOnItemLongClickListener((parent, view, position, id) -> {
+                UserResource res = (UserResource) parent.getItemAtPosition(position);
+                showFileActions(res);
+                return true;
+            });
+        }
     }
 
     private void showAllFiles() {
         currentFolderId = -2;
         currentFolderName = "Todos os arquivos";
         refreshFiles();
+    }
+
+    private void refreshReferencedFolder(String folderUri) {
+        folderTitle.setText("Carregando...");
+        
+        new Thread(() -> {
+            try {
+                Uri treeUri = Uri.parse(folderUri);
+                android.database.Cursor c = getContentResolver().query(
+                        android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(treeUri,
+                                android.provider.DocumentsContract.getTreeDocumentId(treeUri)),
+                        new String[]{
+                                android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                                android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                                android.provider.DocumentsContract.Document.COLUMN_MIME_TYPE,
+                                android.provider.DocumentsContract.Document.COLUMN_SIZE},
+                        null, null, null);
+                
+                final List<UserResource> folderContents = new ArrayList<>();
+                
+                if (c != null) {
+                    while (c.moveToNext()) {
+                        String mime = c.getString(2);
+                        String docId = c.getString(0);
+                        String name = c.getString(1);
+                        long size = c.getLong(3);
+                        
+                        Uri childUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
+                        
+                        UserResource res = new UserResource();
+                        res.setTitle(name);
+                        res.setUri(childUri.toString());
+                        res.setMimeType(mime);
+                        res.setSize(size);
+                        res.setType(mime != null && mime.contains("vnd.android.document/directory") ? 
+                                UserResource.TYPE_REFERENCED_FOLDER : UserResource.TYPE_REFERENCED_FILE);
+                        res.setCreatedAt(System.currentTimeMillis());
+                        
+                        folderContents.add(res);
+                    }
+                    c.close();
+                }
+                
+                runOnUiThread(() -> {
+                    if (folderContents.isEmpty()) {
+                        emptyText.setVisibility(View.VISIBLE);
+                        emptyText.setText("Pasta vazia");
+                    } else {
+                        emptyText.setVisibility(View.GONE);
+                    }
+                    filesList.setAdapter(new com.biblia.estudo.ui.library.ResourceListAdapter(this, folderContents));
+                    
+                    filesList.setOnItemClickListener((parent, view, position, id) -> {
+                        UserResource res = (UserResource) parent.getItemAtPosition(position);
+                        if (res.isReferencedFolder()) {
+                            // Navigate deeper into subfolder
+                            refreshReferencedFolder(res.getUri());
+                        } else {
+                            try {
+                                Intent intent = new Intent(Intent.ACTION_VIEW);
+                                intent.setDataAndType(Uri.parse(res.getUri()), res.getMimeType());
+                                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                startActivity(intent);
+                            } catch (Exception e) {
+                                Toast.makeText(this, "Erro ao abrir arquivo", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    });
+                    filesList.setOnItemLongClickListener((parent, view, position, id) -> {
+                        UserResource res = (UserResource) parent.getItemAtPosition(position);
+                        showReferencedItemActions(res, folderUri);
+                        return true;
+                    });
+                });
+                
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Erro ao acessar pasta: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    emptyText.setVisibility(View.VISIBLE);
+                    emptyText.setText("Erro ao acessar pasta");
+                });
+            }
+        }).start();
+    }
+
+    private void showReferencedItemActions(UserResource res, String parentFolderUri) {
+        String[] options;
+        if (res.isReferencedFolder()) {
+            options = new String[]{"Abrir", "Renomear", "Remover da biblioteca"};
+        } else {
+            options = new String[]{"Abrir", "Renomear", "Remover da biblioteca"};
+        }
+        
+        new AlertDialog.Builder(this)
+                .setTitle(res.getTitle())
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        if (res.isReferencedFolder()) {
+                            refreshReferencedFolder(res.getUri());
+                        } else {
+                            try {
+                                Intent intent = new Intent(Intent.ACTION_VIEW);
+                                intent.setDataAndType(Uri.parse(res.getUri()), res.getMimeType());
+                                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                startActivity(intent);
+                            } catch (Exception e) {
+                                Toast.makeText(this, "Erro ao abrir arquivo", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    } else if (which == 1) {
+                        renameReferencedItem(res, parentFolderUri);
+                    } else if (which == 2) {
+                        // Just remove the reference from library
+                        resourceDao.deleteById(res.getId());
+                        refreshFiles();
+                        refreshFolders();
+                        Toast.makeText(this, "Referência removida da biblioteca", Toast.LENGTH_SHORT).show();
+                    }
+                }).show();
+    }
+
+    private void renameReferencedItem(UserResource res, String parentFolderUri) {
+        EditText input = new EditText(this);
+        input.setText(res.getTitle());
+        input.setPadding(40, 20, 40, 20);
+        new AlertDialog.Builder(this)
+                .setTitle("Renomear")
+                .setView(input)
+                .setPositiveButton("OK", (d, w) -> {
+                    String name = input.getText().toString().trim();
+                    if (!name.isEmpty()) {
+                        // Update in our local storage
+                        SQLiteDatabase db = BibliaApplication.getDatabaseManager().getBibleDatabase();
+                        db.execSQL("UPDATE user_resources SET title=? WHERE _id=?",
+                                new String[]{name, String.valueOf(res.getId())});
+                        refreshFiles();
+                        Toast.makeText(this, "Renomeado", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private void showUncategorized() {
