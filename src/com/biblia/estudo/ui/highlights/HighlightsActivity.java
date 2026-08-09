@@ -147,6 +147,8 @@ public class HighlightsActivity extends Activity {
         groupAdapter.clear();
         groupAdapter.addAll(spinnerGroups);
         groupAdapter.notifyDataSetChanged();
+        // Default to "No group" (position 0)
+        groupSpinner.setSelection(0);
     }
 
     private void loadHighlights() {

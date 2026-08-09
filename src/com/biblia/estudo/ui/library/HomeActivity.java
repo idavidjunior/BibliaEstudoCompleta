@@ -245,6 +245,10 @@ public class HomeActivity extends Activity {
     }
 
     private void importFolderContents(Uri treeUri) {
+        importFolderContentsRecursive(treeUri, "");
+    }
+
+    private void importFolderContentsRecursive(Uri treeUri, String parentPath) {
         try {
             android.database.Cursor c = getContentResolver().query(
                     android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(treeUri,
@@ -258,14 +262,21 @@ public class HomeActivity extends Activity {
                 int count = 0;
                 while (c.moveToNext()) {
                     String mime = c.getString(2);
-                    if (mime != null && !mime.contains("vnd.android.document/directory")) {
-                        String docId = c.getString(0);
-                        Uri childUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
-                        String name = c.getString(1);
-                        long size = c.getLong(3);
+                    String docId = c.getString(0);
+                    String name = c.getString(1);
+                    long size = c.getLong(3);
 
+                    Uri childUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
+
+                    if (mime != null && mime.contains("vnd.android.document/directory")) {
+                        // It's a subdirectory - recurse
+                        String newPath = parentPath.isEmpty() ? name : parentPath + "/" + name;
+                        importFolderContentsRecursive(childUri, newPath);
+                    } else {
+                        // It's a file - import with path
                         UserResource res = new UserResource();
-                        res.setTitle(name);
+                        String fullTitle = parentPath.isEmpty() ? name : parentPath + "/" + name;
+                        res.setTitle(fullTitle);
                         res.setUri(childUri.toString());
                         res.setMimeType(mime);
                         res.setSize(size);
@@ -275,8 +286,10 @@ public class HomeActivity extends Activity {
                     }
                 }
                 c.close();
-                refreshResources();
-                Toast.makeText(this, count + " arquivos importados da pasta", Toast.LENGTH_SHORT).show();
+                if (parentPath.isEmpty()) {
+                    refreshResources();
+                    Toast.makeText(this, count + " arquivos importados da pasta", Toast.LENGTH_SHORT).show();
+                }
             }
         } catch (Exception e) {
             Toast.makeText(this, "Erro ao importar pasta", Toast.LENGTH_SHORT).show();

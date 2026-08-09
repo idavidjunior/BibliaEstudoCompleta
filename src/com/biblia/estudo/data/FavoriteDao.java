@@ -106,6 +106,13 @@ public class FavoriteDao {
         return count;
     }
 
+    public int getCountByBook(long bookId) {
+        Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + BibleDatabaseHelper.TABLE_FAVORITES + " WHERE book_id=?", new String[]{String.valueOf(bookId)});
+        int count = 0;
+        if (c != null && c.moveToFirst()) { count = c.getInt(0); c.close(); }
+        return count;
+    }
+
     private Favorite cursorToFavorite(Cursor c) {
         Favorite f = new Favorite();
         f.setId(c.getLong(c.getColumnIndexOrThrow("_id")));

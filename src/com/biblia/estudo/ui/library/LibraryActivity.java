@@ -17,6 +17,8 @@ import android.widget.TextView;
 import com.biblia.estudo.R;
 import com.biblia.estudo.app.BibliaApplication;
 import com.biblia.estudo.data.BookDao;
+import com.biblia.estudo.data.FavoriteDao;
+import com.biblia.estudo.data.NoteDao;
 import com.biblia.estudo.model.Book;
 import com.biblia.estudo.ui.apocrypha.ApocryphaBookListActivity;
 import com.biblia.estudo.ui.bible.BibleReaderActivity;
@@ -30,6 +32,8 @@ public class LibraryActivity extends Activity {
     private ListView listView;
     private Spinner testamentSpinner;
     private BookDao bookDao;
+    private FavoriteDao favoriteDao;
+    private NoteDao noteDao;
     private BookListAdapter adapter;
     private int currentTestament = Book.TESTAMENT_OLD;
 
@@ -41,6 +45,8 @@ public class LibraryActivity extends Activity {
 
         SQLiteDatabase db = BibliaApplication.getDatabaseManager().getBibleDatabase();
         bookDao = new BookDao(db);
+        favoriteDao = new FavoriteDao(db);
+        noteDao = new NoteDao(db);
 
         searchView = findViewById(R.id.searchView);
         listView = findViewById(R.id.listView);
@@ -96,7 +102,7 @@ public class LibraryActivity extends Activity {
                     loadBooks(currentTestament);
                 } else {
                     List<Book> results = bookDao.searchByName(query);
-                    adapter = new BookListAdapter(LibraryActivity.this, results);
+                    adapter = new BookListAdapter(LibraryActivity.this, results, favoriteDao, noteDao);
                     listView.setAdapter(adapter);
                 }
             }
@@ -106,7 +112,7 @@ public class LibraryActivity extends Activity {
     private void loadBooks(int testament) {
         currentTestament = testament;
         List<Book> books = bookDao.getByTestament(testament);
-        adapter = new BookListAdapter(this, books);
+        adapter = new BookListAdapter(this, books, favoriteDao, noteDao);
         listView.setAdapter(adapter);
 
         listView.setOnItemClickListener((parent, view, position, id) -> {

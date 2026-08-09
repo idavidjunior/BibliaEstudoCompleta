@@ -40,13 +40,40 @@
                 android:textStyle="bold"
                 android:textColor="@color/text_primary" />
 
-            <TextView
-                android:id="@+id/chapterCount"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="@color/text_secondary"
-                android:visibility="gone" />
+                android:orientation="horizontal"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:id="@+id/chapterCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginEnd="16dp" />
+
+                <TextView
+                    android:id="@+id/favoriteCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:textColor="@color/accent"
+                    android:drawableStart="@android:drawable/star_big_on"
+                    android:drawablePadding="4dp"
+                    android:layout_marginEnd="16dp" />
+
+                <TextView
+                    android:id="@+id/notesCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary"
+                    android:drawableStart="@android:drawable/ic_menu_edit"
+                    android:drawablePadding="4dp" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

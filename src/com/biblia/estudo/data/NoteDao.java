@@ -86,6 +86,13 @@ public class NoteDao {
         return count;
     }
 
+    public int getCountByBook(long bookId) {
+        Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + BibleDatabaseHelper.TABLE_NOTES + " WHERE book_id=?", new String[]{String.valueOf(bookId)});
+        int count = 0;
+        if (c != null && c.moveToFirst()) { count = c.getInt(0); c.close(); }
+        return count;
+    }
+
     private UserNote cursorToNote(Cursor c) {
         UserNote n = new UserNote();
         n.setId(c.getLong(c.getColumnIndexOrThrow("_id")));
