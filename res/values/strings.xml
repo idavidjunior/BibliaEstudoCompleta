@@ -25,6 +25,7 @@
     <string name="menu_bible">Bíblia</string>
     <string name="menu_search">Pesquisar</string>
     <string name="menu_favorites">Favoritos</string>
+    <string name="menu_highlights">Destaques</string>
     <string name="menu_notes">Notas</string>
     <string name="menu_more">Mais</string>
 
@@ -109,9 +110,19 @@
     <string name="btn_retry">Tentar Novamente</string>
     <string name="confirm_exit">Sair do aplicativo?</string>
     <string name="confirm_delete">Tem certeza que deseja excluir?</string>
-    <string name="no_notes">Nenhuma anotação ainda</string>
+<string name="no_notes">Nenhuma anotação ainda</string>
     <string name="no_favorites">Nenhum favorito ainda</string>
+    <string name="no_highlights">Nenhum destaque ainda</string>
     <string name="no_history">Nenhum histórico de leitura</string>
+
+    <string name="sort_by_book">Por Livro (Referência)</string>
+    <string name="sort_by_testament">Por Testamento</string>
+    <string name="sort_by_date">Por Data (Recentes)</string>
+    <string name="sort_by_color">Por Cor</string>
+    <string name="sort_by_tag">Por Tag</string>
+    <string name="organize_by">Organizar por:</string>
+    <string name="title_highlights">Destaques</string>
+
     <string name="note_hint">Escreva sua anotação…</string>
     <string name="note_saved">Anotação salva</string>
     <string name="note_deleted">Anotação excluída</string>

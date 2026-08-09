@@ -1,4 +1,4 @@
-$SdkDir = "C:\Users\Playtec-bancada\AppData\Local\Android\Sdk"
+$SdkDir = "C:\Users\David Jr\AppData\Local\Android\Sdk"
 $BuildTools = "$SdkDir\build-tools\34.0.0"
 $Platform = "$SdkDir\platforms\android-36\android.jar"
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path

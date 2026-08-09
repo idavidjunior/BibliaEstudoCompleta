@@ -58,6 +58,30 @@ public class HighlightDao {
         return exists;
     }
 
+    public List<Highlight> getAll() {
+        List<Highlight> list = new ArrayList<>();
+        Cursor c = db.query(BibleDatabaseHelper.TABLE_HIGHLIGHTS, null, null, null, null, null, "created_at DESC");
+        if (c != null) {
+            while (c.moveToNext()) list.add(cursorTo(c));
+            c.close();
+        }
+        return list;
+    }
+
+    public List<Highlight> getAllWithBookInfo() {
+        List<Highlight> list = new ArrayList<>();
+        String query = "SELECT h.*, b.name as book_name, b.testament " +
+                "FROM " + BibleDatabaseHelper.TABLE_HIGHLIGHTS + " h " +
+                "JOIN " + BibleDatabaseHelper.TABLE_BOOKS + " b ON h.book_id = b._id " +
+                "ORDER BY h.created_at DESC";
+        Cursor c = db.rawQuery(query, null);
+        if (c != null) {
+            while (c.moveToNext()) list.add(cursorToWithBook(c));
+            c.close();
+        }
+        return list;
+    }
+
     private Highlight cursorTo(Cursor c) {
         Highlight h = new Highlight();
         h.setId(c.getLong(c.getColumnIndexOrThrow("_id")));
@@ -67,6 +91,17 @@ public class HighlightDao {
         h.setVerseEnd(c.getInt(c.getColumnIndexOrThrow("verse_end")));
         h.setColor(c.getString(c.getColumnIndexOrThrow("color")));
         h.setCreatedAt(c.getLong(c.getColumnIndexOrThrow("created_at")));
+        return h;
+    }
+
+    private Highlight cursorToWithBook(Cursor c) {
+        Highlight h = cursorTo(c);
+        try {
+            int nameIdx = c.getColumnIndex("book_name");
+            if (nameIdx >= 0) h.setBookName(c.getString(nameIdx));
+            int testamentIdx = c.getColumnIndex("testament");
+            if (testamentIdx >= 0) h.setTestament(c.getInt(testamentIdx));
+        } catch (Exception ignored) {}
         return h;
     }
 }

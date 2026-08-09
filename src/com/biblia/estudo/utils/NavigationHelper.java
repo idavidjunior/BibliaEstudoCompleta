@@ -8,6 +8,7 @@ import com.biblia.estudo.R;
 import com.biblia.estudo.ui.bible.BibleReaderActivity;
 import com.biblia.estudo.ui.dictionary.DictionaryActivity;
 import com.biblia.estudo.ui.favorites.FavoritesActivity;
+import com.biblia.estudo.ui.highlights.HighlightsActivity;
 import com.biblia.estudo.ui.library.HomeActivity;
 import com.biblia.estudo.ui.library.LibraryActivity;
 import com.biblia.estudo.ui.notes.NotesActivity;
@@ -25,6 +26,7 @@ public class NavigationHelper {
         View navBible = activity.findViewById(R.id.navBible);
         View navSearch = activity.findViewById(R.id.navSearch);
         View navFavorites = activity.findViewById(R.id.navFavorites);
+        View navHighlights = activity.findViewById(R.id.navHighlights);
         View navMore = activity.findViewById(R.id.navMore);
 
         if (navHome != null) {
@@ -47,6 +49,11 @@ public class NavigationHelper {
         if (navFavorites != null) {
             navFavorites.setOnClickListener(v -> {
                 activity.startActivity(new Intent(activity, FavoritesActivity.class));
+            });
+        }
+        if (navHighlights != null) {
+            navHighlights.setOnClickListener(v -> {
+                activity.startActivity(new Intent(activity, HighlightsActivity.class));
             });
         }
         if (navMore != null) {

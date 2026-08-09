@@ -74,6 +74,11 @@
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <activity
+            android:name=".ui.highlights.HighlightsActivity"
+            android:label="@string/title_highlights"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
+        <activity
             android:name=".ui.notes.NotesActivity"
             android:label="@string/title_notes"
             android:configChanges="orientation|screenSize|keyboardHidden" />
