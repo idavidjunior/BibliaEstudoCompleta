@@ -115,18 +115,27 @@ public class DatabaseManager {
         try {
             Cursor c = db.rawQuery("PRAGMA table_info(favorites)", null);
             boolean hasGroupId = false;
+            boolean hasTags = false;
             if (c != null) {
                 while (c.moveToNext()) {
                     String colName = c.getString(c.getColumnIndexOrThrow("name"));
                     if ("group_id".equals(colName)) {
                         hasGroupId = true;
-                        break;
+                    }
+                    if ("tags".equals(colName)) {
+                        hasTags = true;
                     }
                 }
                 c.close();
             }
             if (!hasGroupId) {
                 db.execSQL("ALTER TABLE favorites ADD COLUMN group_id INTEGER DEFAULT 0");
+            }
+            if (!hasTags) {
+                db.execSQL("ALTER TABLE favorites ADD COLUMN tags TEXT");
+                try {
+                    db.execSQL("UPDATE favorites SET tags = tag WHERE tag IS NOT NULL");
+                } catch (Exception ignored) {}
             }
         } catch (Exception ignored) {}
 

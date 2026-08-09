@@ -79,23 +79,12 @@
             android:clickable="true"
             android:background="@drawable/nav_item_bg" />
 
-        <TextView
-            android:id="@+id/btnChapterTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:textColor="@color/text_primary"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:paddingLeft="12dp"
-            android:paddingRight="12dp" />
-
         <Spinner
             android:id="@+id/chapterSpinner"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:visibility="gone" />
+            android:visibility="visible" />
 
         <TextView
             android:id="@+id/btnNextChapter"

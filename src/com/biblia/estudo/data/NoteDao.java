@@ -93,6 +93,14 @@ public class NoteDao {
         return count;
     }
 
+    public int getCountByChapter(long bookId, int chapter) {
+        Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + BibleDatabaseHelper.TABLE_NOTES + " WHERE book_id=? AND chapter=?",
+                new String[]{String.valueOf(bookId), String.valueOf(chapter)});
+        int count = 0;
+        if (c != null && c.moveToFirst()) { count = c.getInt(0); c.close(); }
+        return count;
+    }
+
     private UserNote cursorToNote(Cursor c) {
         UserNote n = new UserNote();
         n.setId(c.getLong(c.getColumnIndexOrThrow("_id")));

@@ -52,6 +52,19 @@ public class FavoriteDao {
         return exists;
     }
 
+    public List<Integer> getVerseNumbersByChapter(long bookId, int chapter) {
+        List<Integer> list = new ArrayList<>();
+        Cursor c = db.query(BibleDatabaseHelper.TABLE_FAVORITES, new String[]{"verse_number"},
+                "book_id=? AND chapter=?",
+                new String[]{String.valueOf(bookId), String.valueOf(chapter)},
+                null, null, null);
+        if (c != null) {
+            while (c.moveToNext()) list.add(c.getInt(c.getColumnIndexOrThrow("verse_number")));
+            c.close();
+        }
+        return list;
+    }
+
     public List<Favorite> getAll() {
         List<Favorite> list = new ArrayList<>();
         Cursor c = db.query(BibleDatabaseHelper.TABLE_FAVORITES, null,
@@ -108,6 +121,14 @@ public class FavoriteDao {
 
     public int getCountByBook(long bookId) {
         Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + BibleDatabaseHelper.TABLE_FAVORITES + " WHERE book_id=?", new String[]{String.valueOf(bookId)});
+        int count = 0;
+        if (c != null && c.moveToFirst()) { count = c.getInt(0); c.close(); }
+        return count;
+    }
+
+    public int getCountByChapter(long bookId, int chapter) {
+        Cursor c = db.rawQuery("SELECT COUNT(*) FROM " + BibleDatabaseHelper.TABLE_FAVORITES + " WHERE book_id=? AND chapter=?",
+                new String[]{String.valueOf(bookId), String.valueOf(chapter)});
         int count = 0;
         if (c != null && c.moveToFirst()) { count = c.getInt(0); c.close(); }
         return count;

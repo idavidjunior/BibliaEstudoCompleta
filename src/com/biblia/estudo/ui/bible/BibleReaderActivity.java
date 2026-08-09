@@ -48,7 +48,6 @@ public class BibleReaderActivity extends Activity {
     private TextView toolbarTitle;
     private Spinner chapterSpinner;
     private TextView btnPrev, btnNext;
-    private TextView btnChapterTitle;
     private TextView btnFavorite, btnShare, btnNote, btnDictionary;
 
     private long bookId;
@@ -89,6 +88,12 @@ public class BibleReaderActivity extends Activity {
         loadChapter(currentChapter);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshChapterSpinner();
+    }
+
     private void initViews() {
         versesContainer = findViewById(R.id.versesContainer);
         scrollView = findViewById(R.id.scrollView);
@@ -96,17 +101,13 @@ public class BibleReaderActivity extends Activity {
         chapterSpinner = findViewById(R.id.chapterSpinner);
         btnPrev = (TextView) findViewById(R.id.btnPreviousChapter);
         btnNext = (TextView) findViewById(R.id.btnNextChapter);
-        btnChapterTitle = findViewById(R.id.btnChapterTitle);
 
         toolbarTitle.setText(bookName);
         NavigationHelper.setupBackButton(this);
     }
 
     private void setupChapterSpinner() {
-        String[] chapters = new String[chapterCount];
-        for (int i = 0; i < chapterCount; i++) {
-            chapters[i] = "Capítulo " + (i + 1);
-        }
+        String[] chapters = buildChapterLabels();
         android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, chapters);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -123,6 +124,29 @@ public class BibleReaderActivity extends Activity {
             @Override
             public void onNothingSelected(android.widget.AdapterView<?> parent) {}
         });
+    }
+
+    private String[] buildChapterLabels() {
+        String[] chapters = new String[chapterCount];
+        for (int i = 0; i < chapterCount; i++) {
+            int favs = favoriteDao.getCountByChapter(bookId, i + 1);
+            int notes = noteDao.getCountByChapter(bookId, i + 1);
+            String label = "Capítulo " + (i + 1);
+            if (favs > 0) label += " ★" + favs;
+            if (notes > 0) label += " 📝" + notes;
+            chapters[i] = label;
+        }
+        return chapters;
+    }
+
+    private void refreshChapterSpinner() {
+        int sel = currentChapter - 1;
+        String[] chapters = buildChapterLabels();
+        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, chapters);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        chapterSpinner.setAdapter(adapter);
+        chapterSpinner.setSelection(sel);
     }
 
     private void setupNavigationButtons() {
@@ -157,10 +181,6 @@ public class BibleReaderActivity extends Activity {
     }
 
     private void loadChapter(int chapter) {
-        if (btnChapterTitle != null) {
-            btnChapterTitle.setText("Capítulo " + chapter);
-        }
-
         List<Verse> verses = verseDao.getChapter(bookId, chapter);
         if (verses.isEmpty()) {
             versesContainer.removeAllViews();
@@ -174,6 +194,7 @@ public class BibleReaderActivity extends Activity {
         }
 
         List<Highlight> highlights = highlightDao.getByChapter(bookId, chapter);
+        List<Integer> favorites = favoriteDao.getVerseNumbersByChapter(bookId, chapter);
         versesContainer.removeAllViews();
 
         int fontSize = themeManager.getFontSize();
@@ -206,6 +227,7 @@ public class BibleReaderActivity extends Activity {
             }
 
             boolean hasNote = noteDao.getByVerse(fBookId, fChapter, fVerseNum) != null;
+            boolean isFav = favorites.contains(fVerseNum);
 
             LinearLayout verseLayout = new LinearLayout(this);
             verseLayout.setOrientation(LinearLayout.HORIZONTAL);
@@ -225,6 +247,9 @@ public class BibleReaderActivity extends Activity {
             numView.setTextColor(getResources().getColor(R.color.verse_number));
             numView.setTypeface(null, Typeface.BOLD);
             numView.setPadding(0, 0, 8, 0);
+            if (isFav) {
+                numView.setText(numView.getText() + "★");
+            }
             if (hasNote) {
                 numView.setText(numView.getText() + "📝");
             }
@@ -318,6 +343,8 @@ public class BibleReaderActivity extends Activity {
             favoriteDao.insert(fav);
             Toast.makeText(this, R.string.favorite_added, Toast.LENGTH_SHORT).show();
         }
+        refreshChapterSpinner();
+        loadChapter(currentChapter);
     }
 
     private void showMultiFavoriteDialog() {
@@ -410,6 +437,8 @@ public class BibleReaderActivity extends Activity {
                         noteDao.insert(n);
                     }
                     Toast.makeText(this, "Anotação salva", Toast.LENGTH_SHORT).show();
+                    refreshChapterSpinner();
+                    loadChapter(currentChapter);
                 })
                 .setNegativeButton("Cancelar", null)
                 .show();
