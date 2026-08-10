@@ -6,6 +6,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import com.biblia.estudo.utils.SearchUtils;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -153,6 +155,38 @@ public class DatabaseManager {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_highlights_group ON highlights(group_id);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_favorites_group ON favorites(group_id);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_groups_type ON groups(type);");
+        } catch (Exception ignored) {}
+
+        ensureFtsIndex(db);
+    }
+
+    private void ensureFtsIndex(SQLiteDatabase db) {
+        try {
+            Cursor c = db.rawQuery("SELECT COUNT(*) FROM verses_fts_segdir", null);
+            boolean populated = false;
+            if (c != null) {
+                if (c.moveToFirst()) populated = c.getInt(0) > 0;
+                c.close();
+            }
+            if (populated) return;
+
+            Cursor v = db.rawQuery("SELECT rowid, text FROM verses", null);
+            if (v != null) {
+                db.beginTransaction();
+                try {
+                    while (v.moveToNext()) {
+                        String text = v.getString(1);
+                        if (text == null || text.isEmpty()) continue;
+                        long rowid = v.getLong(0);
+                        db.execSQL("INSERT INTO verses_fts(docid, text, book_id, chapter, verse_number) VALUES (?,?,?,?,?)",
+                                new Object[]{rowid, SearchUtils.normalize(text), null, null, null});
+                    }
+                    db.setTransactionSuccessful();
+                } finally {
+                    db.endTransaction();
+                }
+                v.close();
+            }
         } catch (Exception ignored) {}
     }
 

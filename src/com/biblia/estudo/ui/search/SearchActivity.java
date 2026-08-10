@@ -101,8 +101,10 @@ public class SearchActivity extends Activity {
         Cursor cursor = null;
         switch (searchMode) {
             case 0:
-            case 1:
                 cursor = searchEngine.searchByWordCursor(query);
+                break;
+            case 1:
+                cursor = searchEngine.searchByPhraseCursor(query);
                 break;
             case 2:
                 cursor = searchEngine.searchByBookCursor(query);
@@ -124,11 +126,16 @@ public class SearchActivity extends Activity {
                 int chapter = c.getInt(c.getColumnIndexOrThrow("chapter"));
                 int verse = c.getInt(c.getColumnIndexOrThrow("verse_number"));
                 String bookName = c.getString(c.getColumnIndexOrThrow("book_name"));
+                int chapterCount = 1;
+                int colIdx = c.getColumnIndex("chapter_count");
+                if (colIdx >= 0) {
+                    chapterCount = c.getInt(colIdx);
+                }
 
                 Intent intent = new Intent(SearchActivity.this, BibleReaderActivity.class);
                 intent.putExtra("book_id", bookId);
                 intent.putExtra("book_name", bookName);
-                intent.putExtra("chapter_count", 150);
+                intent.putExtra("chapter_count", chapterCount);
                 intent.putExtra("chapter", chapter);
                 intent.putExtra("verse", verse);
                 startActivity(intent);

@@ -55,6 +55,7 @@ public class BibleReaderActivity extends Activity {
     private int chapterCount;
     private int currentChapter = 1;
     private int currentVerse = 1;
+    private int targetVerse = -1;
 
     private VerseDao verseDao;
     private NoteDao noteDao;
@@ -73,6 +74,12 @@ public class BibleReaderActivity extends Activity {
         bookId = getIntent().getLongExtra("book_id", 1);
         bookName = getIntent().getStringExtra("book_name");
         chapterCount = getIntent().getIntExtra("chapter_count", 1);
+
+        int startChapter = getIntent().getIntExtra("chapter", 1);
+        targetVerse = getIntent().getIntExtra("verse", -1);
+        if (startChapter < 1) startChapter = 1;
+        if (startChapter > chapterCount) startChapter = chapterCount;
+        currentChapter = startChapter;
 
         SQLiteDatabase db = BibliaApplication.getDatabaseManager().getBibleDatabase();
         verseDao = new VerseDao(db);
@@ -287,6 +294,7 @@ public class BibleReaderActivity extends Activity {
             numView.setOnLongClickListener(longClickListener);
             textView.setOnLongClickListener(longClickListener);
 
+            verseLayout.setTag("verse_" + fVerseNum);
             versesContainer.addView(verseLayout);
 
             // Add a thin divider between verses
@@ -297,8 +305,25 @@ public class BibleReaderActivity extends Activity {
             versesContainer.addView(divider);
         }
 
+        if (targetVerse > 0) scrollToVerse(targetVerse);
+
         progressDao.saveProgress(bookId, chapter, 1);
         themeManager.saveLastPosition(bookId, chapter, 1);
+    }
+
+    private void scrollToVerse(int verseNum) {
+        scrollView.post(new Runnable() {
+            @Override
+            public void run() {
+                for (int i = 0; i < versesContainer.getChildCount(); i++) {
+                    View v = versesContainer.getChildAt(i);
+                    if (v.getTag() instanceof String && ("verse_" + verseNum).equals(v.getTag())) {
+                        scrollView.scrollTo(0, Math.max(0, v.getTop() - 40));
+                        return;
+                    }
+                }
+            }
+        });
     }
 
     private void showVerseActions(int verseNum, String verseText) {
