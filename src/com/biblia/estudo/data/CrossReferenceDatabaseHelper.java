@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class CrossReferenceDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "referencias.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     public static final String TABLE_CROSS_REFERENCES = "cross_references";
 

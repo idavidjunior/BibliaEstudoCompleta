@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.text.SpannableString;
 import android.text.Spanned;
@@ -30,9 +31,11 @@ import com.biblia.estudo.data.FavoriteDao;
 import com.biblia.estudo.data.HighlightDao;
 import com.biblia.estudo.data.NoteDao;
 import com.biblia.estudo.data.ReadingProgressDao;
+import com.biblia.estudo.data.TranslationDao;
 import com.biblia.estudo.data.VerseDao;
 import com.biblia.estudo.model.Favorite;
 import com.biblia.estudo.model.Highlight;
+import com.biblia.estudo.model.Translation;
 import com.biblia.estudo.model.UserNote;
 import com.biblia.estudo.model.Verse;
 import com.biblia.estudo.ui.dictionary.DictionaryActivity;
@@ -46,6 +49,7 @@ public class BibleReaderActivity extends Activity {
     private LinearLayout versesContainer;
     private ScrollView scrollView;
     private TextView toolbarTitle;
+    private TextView toolbarSubtitle;
     private Spinner chapterSpinner;
     private TextView btnPrev, btnNext;
     private TextView btnFavorite, btnShare, btnNote, btnDictionary;
@@ -56,12 +60,14 @@ public class BibleReaderActivity extends Activity {
     private int currentChapter = 1;
     private int currentVerse = 1;
     private int targetVerse = -1;
+    private String translationId = BibliaApplication.DEFAULT_TRANSLATION;
 
     private VerseDao verseDao;
     private NoteDao noteDao;
     private HighlightDao highlightDao;
     private FavoriteDao favoriteDao;
     private ReadingProgressDao progressDao;
+    private TranslationDao translationDao;
     private ThemeManager themeManager;
 
     @Override
@@ -87,11 +93,19 @@ public class BibleReaderActivity extends Activity {
         noteDao = new NoteDao(db);
         favoriteDao = new FavoriteDao(db);
         progressDao = new ReadingProgressDao(db);
+        translationDao = new TranslationDao(db);
+
+        String intentTranslation = getIntent().getStringExtra("translation");
+        translationId = intentTranslation != null ? intentTranslation : BibliaApplication.getActiveTranslation();
+        if (translationDao.getByCode(translationId) == null) {
+            translationId = BibliaApplication.DEFAULT_TRANSLATION;
+        }
 
         initViews();
         setupChapterSpinner();
         setupNavigationButtons();
         setupBottomPanel();
+        setupTranslationSelector();
         loadChapter(currentChapter);
     }
 
@@ -105,12 +119,44 @@ public class BibleReaderActivity extends Activity {
         versesContainer = findViewById(R.id.versesContainer);
         scrollView = findViewById(R.id.scrollView);
         toolbarTitle = findViewById(R.id.toolbarTitle);
+        toolbarSubtitle = findViewById(R.id.toolbarSubtitle);
         chapterSpinner = findViewById(R.id.chapterSpinner);
         btnPrev = (TextView) findViewById(R.id.btnPreviousChapter);
         btnNext = (TextView) findViewById(R.id.btnNextChapter);
 
         toolbarTitle.setText(bookName);
         NavigationHelper.setupBackButton(this);
+    }
+
+    private void setupTranslationSelector() {
+        updateTranslationSubtitle();
+        toolbarSubtitle.setClickable(true);
+        toolbarSubtitle.setOnClickListener(v -> showTranslationPicker());
+    }
+
+    private void updateTranslationSubtitle() {
+        String name = translationDao.getName(translationId);
+        toolbarSubtitle.setText(name + " ▾");
+    }
+
+    private void showTranslationPicker() {
+        final List<Translation> translations = translationDao.getAll();
+        if (translations.isEmpty()) return;
+        String[] names = new String[translations.size()];
+        for (int i = 0; i < translations.size(); i++) {
+            names[i] = translations.get(i).getName();
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Versão da Bíblia")
+                .setItems(names, (dialog, which) -> {
+                    Translation t = translations.get(which);
+                    if (t.getCode().equals(translationId)) return;
+                    translationId = t.getCode();
+                    BibliaApplication.setActiveTranslation(translationId);
+                    updateTranslationSubtitle();
+                    loadChapter(currentChapter);
+                })
+                .show();
     }
 
     private void setupChapterSpinner() {
@@ -188,11 +234,14 @@ public class BibleReaderActivity extends Activity {
     }
 
     private void loadChapter(int chapter) {
-        List<Verse> verses = verseDao.getChapter(bookId, chapter);
+        List<Verse> verses = verseDao.getChapter(bookId, chapter, translationId);
         if (verses.isEmpty()) {
             versesContainer.removeAllViews();
             TextView empty = new TextView(this);
-            empty.setText("Capítulo não encontrado");
+            boolean hasAnyTranslation = !verseDao.getChapter(bookId, chapter, BibliaApplication.DEFAULT_TRANSLATION).isEmpty();
+            empty.setText(hasAnyTranslation
+                    ? "Capítulo não disponível nesta versão"
+                    : "Capítulo não encontrado");
             empty.setTextSize(themeManager.getFontSize());
             empty.setTextColor(getResources().getColor(R.color.text_secondary));
             empty.setPadding(20, 40, 20, 40);
@@ -235,13 +284,23 @@ public class BibleReaderActivity extends Activity {
 
             boolean hasNote = noteDao.getByVerse(fBookId, fChapter, fVerseNum) != null;
             boolean isFav = favorites.contains(fVerseNum);
+            boolean isTarget = targetVerse > 0 && fVerseNum == targetVerse;
 
             LinearLayout verseLayout = new LinearLayout(this);
             verseLayout.setOrientation(LinearLayout.HORIZONTAL);
             verseLayout.setPadding(20, 6, 20, 6);
-            verseLayout.setBackgroundResource(isHighlighted ? 0 : android.R.color.transparent);
 
-            if (isHighlighted && hlColor != null) {
+            if (isTarget) {
+                // Strong highlight for the verse the user navigated to
+                verseLayout.setBackgroundColor(0xFFFFE082);
+                verseLayout.setPadding(20, 10, 20, 10);
+                verseLayout.setBackgroundResource(0);
+                verseLayout.setBackground(createTargetHighlightDrawable());
+            } else {
+                verseLayout.setBackgroundResource(isHighlighted ? 0 : android.R.color.transparent);
+            }
+
+            if (isHighlighted && hlColor != null && !isTarget) {
                 try {
                     verseLayout.setBackgroundColor(Color.parseColor(hlColor));
                 } catch (Exception ignored) {}
@@ -311,14 +370,25 @@ public class BibleReaderActivity extends Activity {
         themeManager.saveLastPosition(bookId, chapter, 1);
     }
 
+    private android.graphics.drawable.Drawable createTargetHighlightDrawable() {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setShape(GradientDrawable.RECTANGLE);
+        drawable.setColor(0xFFFFF59D);
+        drawable.setStroke(4, 0xFFFF9800);
+        drawable.setCornerRadius(8f);
+        return drawable;
+    }
+
     private void scrollToVerse(int verseNum) {
         scrollView.post(new Runnable() {
             @Override
             public void run() {
+                int viewHeight = scrollView.getHeight();
                 for (int i = 0; i < versesContainer.getChildCount(); i++) {
                     View v = versesContainer.getChildAt(i);
                     if (v.getTag() instanceof String && ("verse_" + verseNum).equals(v.getTag())) {
-                        scrollView.scrollTo(0, Math.max(0, v.getTop() - 40));
+                        int target = Math.max(0, v.getTop() - (viewHeight / 2) + (v.getHeight() / 2));
+                        scrollView.smoothScrollTo(0, target);
                         return;
                     }
                 }
@@ -363,7 +433,7 @@ public class BibleReaderActivity extends Activity {
             fav.setChapter(currentChapter);
             fav.setVerseNumber(currentVerse);
             fav.setBookName(bookName);
-            List<Verse> verses = verseDao.getVersesRange(bookId, currentChapter, currentVerse, currentVerse);
+            List<Verse> verses = verseDao.getVersesRange(bookId, currentChapter, currentVerse, currentVerse, translationId);
             if (!verses.isEmpty()) fav.setVerseText(verses.get(0).getText());
             favoriteDao.insert(fav);
             Toast.makeText(this, R.string.favorite_added, Toast.LENGTH_SHORT).show();
@@ -373,14 +443,14 @@ public class BibleReaderActivity extends Activity {
     }
 
     private void showMultiFavoriteDialog() {
-        int totalVerses = verseDao.getVerseCount(bookId, currentChapter);
+        int totalVerses = verseDao.getVerseCount(bookId, currentChapter, translationId);
         if (totalVerses == 0) {
             totalVerses = 176; // fallback
         }
 
         boolean[] checkedItems = new boolean[totalVerses];
         String[] verseLabels = new String[totalVerses];
-        List<Verse> allVerses = verseDao.getChapter(bookId, currentChapter);
+        List<Verse> allVerses = verseDao.getChapter(bookId, currentChapter, translationId);
         for (int i = 0; i < allVerses.size(); i++) {
             Verse v = allVerses.get(i);
             verseLabels[i] = v.getVerseNumber() + ". " + (v.getText().length() > 60 ? v.getText().substring(0, 60) + "..." : v.getText());
@@ -403,7 +473,7 @@ public class BibleReaderActivity extends Activity {
                             fav.setChapter(currentChapter);
                             fav.setVerseNumber(verseNum);
                             fav.setBookName(bookName);
-                            List<Verse> verses = verseDao.getVersesRange(bookId, currentChapter, verseNum, verseNum);
+                            List<Verse> verses = verseDao.getVersesRange(bookId, currentChapter, verseNum, verseNum, translationId);
                             if (!verses.isEmpty()) fav.setVerseText(verses.get(0).getText());
                             favoriteDao.insert(fav);
                             added++;
@@ -422,7 +492,7 @@ public class BibleReaderActivity extends Activity {
     }
 
     private void shareCurrentVerse() {
-        List<Verse> verses = verseDao.getVersesRange(bookId, currentChapter, currentVerse, currentVerse);
+        List<Verse> verses = verseDao.getVersesRange(bookId, currentChapter, currentVerse, currentVerse, translationId);
         if (!verses.isEmpty()) {
             Verse v = verses.get(0);
             String ref = bookName + " " + currentChapter + ":" + currentVerse;

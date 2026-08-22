@@ -50,7 +50,7 @@ public class ApocryphaReaderActivity extends Activity {
         }
 
         chapterContent.setMovementMethod(new ScrollingMovementMethod());
-        NavigationHelper.setupBottomNav(this);
+        NavigationHelper.setupBottomNav(this, R.id.navBible);
 
         loadChapters();
 

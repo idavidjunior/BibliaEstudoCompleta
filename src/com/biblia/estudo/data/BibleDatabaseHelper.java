@@ -7,10 +7,11 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class BibleDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "biblia_estudo.db";
-    private static final int DATABASE_VERSION = 6;
+    private static final int DATABASE_VERSION = 7;
 
     public static final String TABLE_BOOKS = "books";
     public static final String TABLE_VERSES = "verses";
+    public static final String TABLE_TRANSLATIONS = "translations";
     public static final String TABLE_FAVORITES = "favorites";
     public static final String TABLE_NOTES = "user_notes";
     public static final String TABLE_HIGHLIGHTS = "highlights";
@@ -27,6 +28,7 @@ public class BibleDatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         createBooksTable(db);
         createVersesTable(db);
+        createTranslationsTable(db);
         createFavoritesTable(db);
         createNotesTable(db);
         createHighlightsTable(db);
@@ -65,7 +67,19 @@ public class BibleDatabaseHelper extends SQLiteOpenHelper {
                 "hebrew_text TEXT," +
                 "greek_text TEXT," +
                 "has_commentary INTEGER DEFAULT 0," +
-                "has_cross_ref INTEGER DEFAULT 0" +
+                "has_cross_ref INTEGER DEFAULT 0," +
+                "translation_id TEXT NOT NULL DEFAULT 'arc'" +
+                ");");
+    }
+
+    private void createTranslationsTable(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE_TRANSLATIONS + " (" +
+                "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "code TEXT NOT NULL UNIQUE," +
+                "name TEXT NOT NULL," +
+                "language TEXT," +
+                "license TEXT," +
+                "is_default INTEGER DEFAULT 0" +
                 ");");
     }
 
@@ -161,6 +175,7 @@ public class BibleDatabaseHelper extends SQLiteOpenHelper {
     private void createIndexes(SQLiteDatabase db) {
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_verses_book_chapter ON " + TABLE_VERSES + "(book_id, chapter);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_verses_text ON " + TABLE_VERSES + "(text);");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_verses_translation ON " + TABLE_VERSES + "(translation_id);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_favorites_book ON " + TABLE_FAVORITES + "(book_id, chapter);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_favorites_group ON " + TABLE_FAVORITES + "(group_id);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_notes_book ON " + TABLE_NOTES + "(book_id, chapter, verse_number);");
@@ -201,6 +216,20 @@ public class BibleDatabaseHelper extends SQLiteOpenHelper {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_highlights_group ON " + TABLE_HIGHLIGHTS + "(group_id);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_favorites_group ON " + TABLE_FAVORITES + "(group_id);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_groups_type ON " + TABLE_GROUPS + "(type);");
+        }
+        if (oldVersion < 7) {
+            // Add translation_id to verses and create translations table
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_VERSES + " ADD COLUMN translation_id TEXT NOT NULL DEFAULT 'arc'");
+            } catch (Exception ignored) {}
+            createTranslationsTable(db);
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_verses_translation ON " + TABLE_VERSES + "(translation_id);");
+            try {
+                db.execSQL("INSERT INTO " + TABLE_TRANSLATIONS +
+                        " (code, name, language, license, is_default) VALUES ('arc', 'Almeida Revista e Corrigida', 'pt-BR', 'Sociedade Bíblica do Brasil (licenciada)', 1)");
+                db.execSQL("INSERT INTO " + TABLE_TRANSLATIONS +
+                        " (code, name, language, license, is_default) VALUES ('alm1911', 'Almeida 1911', 'pt-BR', 'Domínio público', 0)");
+            } catch (Exception ignored) {}
         }
     }
 

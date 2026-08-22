@@ -40,92 +40,234 @@
         android:drawablePadding="10dp"
         android:textSize="15sp" />
 
-    <HorizontalScrollView
+    <Spinner
+        android:id="@+id/translationSpinner"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:background="@color/surface"
-        android:elevation="2dp">
+        android:elevation="2dp"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:gravity="center_vertical"
+        android:layout_marginLeft="12dp"
+        android:layout_marginRight="12dp" />
 
-        <RadioGroup
-            android:id="@+id/searchTabs"
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
-            android:orientation="horizontal">
-
-            <RadioButton
-                android:id="@+id/searchWord"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:text="@string/search_by_word"
-                android:button="@null"
-                android:paddingLeft="20dp"
-                android:paddingRight="20dp"
-                android:gravity="center"
-                android:textSize="13sp"
-                android:checked="true"
-                android:textColor="@color/accent" />
-
-            <RadioButton
-                android:id="@+id/searchPhrase"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:text="@string/search_by_phrase"
-                android:button="@null"
-                android:paddingLeft="20dp"
-                android:paddingRight="20dp"
-                android:gravity="center"
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary" />
-
-            <RadioButton
-                android:id="@+id/searchBook"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:text="@string/search_by_book"
-                android:button="@null"
-                android:paddingLeft="20dp"
-                android:paddingRight="20dp"
-                android:gravity="center"
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary" />
-
-            <RadioButton
-                android:id="@+id/searchTopic"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:text="@string/search_by_topic"
-                android:button="@null"
-                android:paddingLeft="20dp"
-                android:paddingRight="20dp"
-                android:gravity="center"
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary" />
-
-        </RadioGroup>
-
-    </HorizontalScrollView>
-
-    <TextView
-        android:id="@+id/noResults"
+    <LinearLayout
+        android:id="@+id/resultsContainer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:gravity="center"
-        android:text="@string/search_no_results"
-        android:textSize="16sp"
-        android:textColor="@color/text_secondary"
-        android:visibility="gone" />
-
-    <ListView
-        android:id="@+id/resultsList"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:divider="@null"
-        android:dividerHeight="0dp"
+        android:orientation="vertical"
         android:clipToPadding="false"
         android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <ListView
+            android:id="@+id/resultsList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:clipToPadding="false"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/resultsCount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="12dp"
+            android:paddingLeft="20dp"
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/noResults"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/search_no_results"
+            android:textSize="16sp"
+            android:textColor="@color/text_secondary"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/surface"
+        android:elevation="8dp"
+        android:gravity="bottom"
         android:paddingBottom="8dp"
-        android:visibility="gone" />
+        android:paddingTop="8dp">
+
+        <LinearLayout
+            android:id="@+id/navHome"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:background="@drawable/nav_item_bg"
+            android:padding="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:text="🏠"
+                android:textSize="20sp"
+                android:gravity="center" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/menu_home"
+                android:textSize="10sp"
+                android:textColor="@color/text_secondary" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navBible"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:background="@drawable/nav_item_bg"
+            android:padding="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:text="📖"
+                android:textSize="20sp"
+                android:gravity="center" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/menu_bible"
+                android:textSize="10sp"
+                android:textColor="@color/text_secondary" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navSearch"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:background="@drawable/nav_item_bg"
+            android:padding="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:text="🔍"
+                android:textSize="20sp"
+                android:gravity="center" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/menu_search"
+                android:textSize="10sp"
+                android:textColor="@color/text_secondary" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navFavorites"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:background="@drawable/nav_item_bg"
+            android:padding="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:text="⭐"
+                android:textSize="20sp"
+                android:gravity="center" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/menu_favorites"
+                android:textSize="10sp"
+                android:textColor="@color/text_secondary" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navHighlights"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:background="@drawable/nav_item_bg"
+            android:padding="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:text="🎨"
+                android:textSize="20sp"
+                android:gravity="center" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/menu_highlights"
+                android:textSize="10sp"
+                android:textColor="@color/text_secondary" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/navMore"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:clickable="true"
+            android:background="@drawable/nav_item_bg"
+            android:padding="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:text="☰"
+                android:textSize="22sp"
+                android:gravity="center" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/menu_more"
+                android:textSize="10sp"
+                android:textColor="@color/text_secondary" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
 </LinearLayout>

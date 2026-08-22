@@ -13,6 +13,7 @@ public class Verse implements Serializable {
     private boolean hasCommentary;
     private boolean hasNotes;
     private boolean hasCrossReferences;
+    private String translationId;
 
     public long getId() { return id; }
     public void setId(long id) { this.id = id; }
@@ -34,6 +35,9 @@ public class Verse implements Serializable {
 
     public String getGreekText() { return greekText; }
     public void setGreekText(String greekText) { this.greekText = greekText; }
+
+    public String getTranslationId() { return translationId; }
+    public void setTranslationId(String translationId) { this.translationId = translationId; }
 
     public boolean hasCommentary() { return hasCommentary; }
     public void setHasCommentary(boolean hasCommentary) { this.hasCommentary = hasCommentary; }

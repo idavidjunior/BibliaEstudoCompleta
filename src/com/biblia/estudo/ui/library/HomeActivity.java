@@ -7,8 +7,13 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -26,11 +31,14 @@ import com.biblia.estudo.model.ReadingProgress;
 import com.biblia.estudo.model.UserResource;
 import com.biblia.estudo.model.Verse;
 import com.biblia.estudo.ui.bible.BibleReaderActivity;
+import com.biblia.estudo.ui.crossref.ReferenceMapActivity;
+import com.biblia.estudo.ui.dictionary.DictionaryActivity;
 import com.biblia.estudo.ui.notes.NotesActivity;
 import com.biblia.estudo.ui.resources.ResourcesActivity;
 import com.biblia.estudo.utils.NavigationHelper;
 import com.biblia.estudo.utils.ResourceImportMenu;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class HomeActivity extends Activity {
@@ -39,12 +47,12 @@ public class HomeActivity extends Activity {
     private static final int REQUEST_IMPORT_MULTIPLE_FILES = 1003;
 
     private TextView lastReadingRef, lastReadingText;
-    private Button btnContinue, btnStart;
+    private Button btnContinue;
     private TextView verseOfDayText, verseOfDayRef;
-    private android.widget.FrameLayout resourcesSection, notesSection;
+    private FrameLayout resourcesSection, notesSection, crossRefSection;
     private ListView resourceList;
     private View emptyResources;
-    private TextView notesPreview;
+    private TextView notesPreview, crossRefPreview;
 
     private ReadingProgressDao progressDao;
     private BookDao bookDao;
@@ -52,10 +60,27 @@ public class HomeActivity extends Activity {
     private UserResourceDao resourceDao;
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.home_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_reorder_home) {
+            showReorderDialog();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         BibliaApplication.getThemeManager().applyTheme(this);
         setContentView(R.layout.activity_home);
+        setActionBar(findViewById(R.id.toolbar));
+        setActionBar(findViewById(R.id.toolbar));
 
         SQLiteDatabase db = BibliaApplication.getDatabaseManager().getBibleDatabase();
         progressDao = new ReadingProgressDao(db);
@@ -66,21 +91,25 @@ public class HomeActivity extends Activity {
         lastReadingRef = findViewById(R.id.lastReadingRef);
         lastReadingText = findViewById(R.id.lastReadingText);
         btnContinue = findViewById(R.id.btnContinueReading);
-        btnStart = findViewById(R.id.btnStartReading);
         verseOfDayText = findViewById(R.id.verseOfDayText);
         verseOfDayRef = findViewById(R.id.verseOfDayRef);
         resourcesSection = findViewById(R.id.resourcesSection);
         notesSection = findViewById(R.id.notesSection);
+        crossRefSection = findViewById(R.id.crossRefSection);
         resourceList = findViewById(R.id.resourceList);
         emptyResources = findViewById(R.id.emptyResources);
         notesPreview = findViewById(R.id.notesPreview);
+        crossRefPreview = findViewById(R.id.crossRefPreview);
 
-        NavigationHelper.setupBottomNav(this);
+        NavigationHelper.setupBottomNav(this, R.id.navHome);
         setupLastReading();
         setupVerseOfDay();
-        setupButtons();
         setupResources();
         setupNotes();
+        setupCrossRefs();
+        setupDictionary();
+        applyHomeOrder();
+        setupReorderByLongPress();
 
         findViewById(R.id.btnImport).setOnClickListener(v ->
                 ResourceImportMenu.show(this, this::importFile, this::importFolder, this::createFolder));
@@ -96,6 +125,13 @@ public class HomeActivity extends Activity {
         notesSection.setOnClickListener(v -> {
             startActivity(new Intent(this, NotesActivity.class));
         });
+
+        findViewById(R.id.quickBible).setOnClickListener(v ->
+                startActivity(new Intent(this, LibraryActivity.class)));
+        findViewById(R.id.quickSearch).setOnClickListener(v ->
+                startActivity(new Intent(this, com.biblia.estudo.ui.search.SearchActivity.class)));
+        findViewById(R.id.quickFavorites).setOnClickListener(v ->
+                startActivity(new Intent(this, com.biblia.estudo.ui.favorites.FavoritesActivity.class)));
     }
 
     private void createFolder() {
@@ -132,7 +168,8 @@ public class HomeActivity extends Activity {
                 lastReadingRef.setText(ref);
 
                 List<Verse> verses = verseDao.getVersesRange(
-                        last.getBookId(), last.getChapter(), last.getVerse(), last.getVerse());
+                        last.getBookId(), last.getChapter(), last.getVerse(), last.getVerse(),
+                        com.biblia.estudo.app.BibliaApplication.getActiveTranslation());
                 if (!verses.isEmpty()) {
                     String text = verses.get(0).getText();
                     if (text.length() > 100) text = text.substring(0, 100) + "...";
@@ -170,10 +207,106 @@ public class HomeActivity extends Activity {
         }
     }
 
-    private void setupButtons() {
-        btnStart.setOnClickListener(v -> {
-            startActivity(new Intent(HomeActivity.this, LibraryActivity.class));
+    private void setupDictionary() {
+        findViewById(R.id.dictionarySection).setOnClickListener(v -> {
+            startActivity(new Intent(this, DictionaryActivity.class));
         });
+        findViewById(R.id.btnOpenDictionary).setOnClickListener(v -> {
+            startActivity(new Intent(this, DictionaryActivity.class));
+        });
+    }
+
+    private void setupReorderByLongPress() {
+        for (View section : getHomeSections()) {
+            section.setOnLongClickListener(v -> {
+                showReorderDialog();
+                return true;
+            });
+        }
+    }
+
+    private List<View> getHomeSections() {
+        List<View> sections = new ArrayList<>();
+        sections.add(findViewById(R.id.quickShortcutsRow));
+        sections.add(findViewById(R.id.lastReadingCard));
+        sections.add(findViewById(R.id.verseOfDayCard));
+        sections.add(findViewById(R.id.dictionarySection));
+        sections.add(findViewById(R.id.notesSection));
+        sections.add(findViewById(R.id.crossRefSection));
+        sections.add(findViewById(R.id.resourcesSection));
+        return sections;
+    }
+
+    private String sectionTitle(View v) {
+        int id = v.getId();
+        if (id == R.id.quickShortcutsRow) return "Atalhos";
+        if (id == R.id.lastReadingCard) return getString(R.string.last_reading);
+        if (id == R.id.verseOfDayCard) return getString(R.string.verse_of_day);
+        if (id == R.id.dictionarySection) return getString(R.string.title_dictionary);
+        if (id == R.id.notesSection) return getString(R.string.title_notes);
+        if (id == R.id.crossRefSection) return getString(R.string.title_cross_references);
+        if (id == R.id.resourcesSection) return getString(R.string.my_resources);
+        return "";
+    }
+
+    private void applyHomeOrder() {
+        String saved = BibliaApplication.getHomeOrder();
+        if (saved == null || saved.isEmpty()) return;
+
+        LinearLayout container = findViewById(R.id.homeSectionsContainer);
+        String[] order = saved.split(",");
+        List<View> sections = getHomeSections();
+        for (String idStr : order) {
+            for (View v : sections) {
+                if (v.getId() == Integer.parseInt(idStr.trim())) {
+                    container.removeView(v);
+                    container.addView(v);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void showReorderDialog() {
+        final List<View> sections = getHomeSections();
+        final List<Integer> order = new ArrayList<>();
+        for (int i = 0; i < sections.size(); i++) order.add(i);
+
+        final List<String> titles = new ArrayList<>();
+        for (int i = 0; i < sections.size(); i++) titles.add(sectionTitle(sections.get(i)));
+
+        final ListView list = new ListView(this);
+        final ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_list_item_1, titles);
+        list.setAdapter(adapter);
+
+        list.setOnItemClickListener((parent, view, position, id) -> {
+            if (position > 0) {
+                int idx = order.get(position);
+                order.remove(position);
+                order.add(position - 1, idx);
+                String t = titles.remove(position);
+                titles.add(position - 1, t);
+                adapter.notifyDataSetChanged();
+            }
+        });
+
+        new AlertDialog.Builder(this)
+                .setTitle("Personalizar ordem dos atalhos")
+                .setMessage("Toque em um item para movê-lo para cima.")
+                .setView(list)
+                .setPositiveButton("Salvar", (dialog, which) -> {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < order.size(); i++) {
+                        if (i > 0) sb.append(',');
+                        sb.append(sections.get(order.get(i)).getId());
+                    }
+                    BibliaApplication.setHomeOrder(sb.toString());
+                    applyHomeOrder();
+                    Toast.makeText(this, "Ordem dos atalhos atualizada", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private void setupResources() {
@@ -224,6 +357,21 @@ public class HomeActivity extends Activity {
         });
     }
 
+    private void setupCrossRefs() {
+        crossRefSection.setOnClickListener(v -> {
+            startActivity(new Intent(this, ReferenceMapActivity.class));
+        });
+        crossRefPreview.setOnClickListener(v -> {
+            startActivity(new Intent(this, ReferenceMapActivity.class));
+        });
+        findViewById(R.id.crossRefHeader).setOnClickListener(v -> {
+            startActivity(new Intent(this, ReferenceMapActivity.class));
+        });
+        findViewById(R.id.btnOpenCrossRefs).setOnClickListener(v -> {
+            startActivity(new Intent(this, ReferenceMapActivity.class));
+        });
+    }
+
     private void importFile() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -264,7 +412,6 @@ public class HomeActivity extends Activity {
         }
     }
 
-    /** Importa um arquivo individual como referência na biblioteca. */
     private void addReferencedFile(Uri uri) {
         try {
             getContentResolver().takePersistableUriPermission(uri,
@@ -317,7 +464,6 @@ public class HomeActivity extends Activity {
         return size;
     }
 
-    /** Importa a pasta escolhida com toda a árvore (subpastas + arquivos), nomes reais. */
     private void addReferencedFolder(Uri uri) {
         if (resourceDao.existsUri(uri.toString(), UserResource.TYPE_REFERENCED_FOLDER)) {
             Toast.makeText(this, "Pasta já está na biblioteca", Toast.LENGTH_SHORT).show();

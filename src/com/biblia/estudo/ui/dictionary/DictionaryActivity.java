@@ -16,6 +16,7 @@ import android.widget.TextView;
 
 import com.biblia.estudo.R;
 import com.biblia.estudo.app.BibliaApplication;
+import com.biblia.estudo.utils.NavigationHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +39,10 @@ public class DictionaryActivity extends Activity {
         resultsList = findViewById(R.id.resultsList);
         detailView = findViewById(R.id.detailView);
 
+        NavigationHelper.setupBottomNav(this, R.id.navMore);
+
         setupSearch();
+        searchDictionary("");
     }
 
     private void setupSearch() {
@@ -49,9 +53,7 @@ public class DictionaryActivity extends Activity {
             @Override
             public void afterTextChanged(Editable s) {
                 String query = s.toString().trim();
-                if (query.length() >= 2) {
-                    searchDictionary(query);
-                }
+                searchDictionary(query);
             }
         });
 
@@ -68,9 +70,16 @@ public class DictionaryActivity extends Activity {
 
     private void searchDictionary(String query) {
         SQLiteDatabase db = BibliaApplication.getDatabaseManager().getDictionaryDatabase();
-        Cursor c = db.rawQuery(
-                "SELECT _id, word, definition FROM dictionary WHERE word LIKE ? ORDER BY word LIMIT 50",
-                new String[]{"%" + query + "%"});
+        Cursor c;
+        if (query.isEmpty()) {
+            c = db.rawQuery(
+                    "SELECT _id, word, definition FROM dictionary ORDER BY word LIMIT 50",
+                    null);
+        } else {
+            c = db.rawQuery(
+                    "SELECT _id, word, definition FROM dictionary WHERE word LIKE ? ORDER BY word LIMIT 50",
+                    new String[]{"%" + query + "%"});
+        }
 
         final List<DictItem> items = new ArrayList<>();
         while (c.moveToNext()) {

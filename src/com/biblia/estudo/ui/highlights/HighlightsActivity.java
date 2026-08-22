@@ -28,6 +28,7 @@ import com.biblia.estudo.model.Group;
 import com.biblia.estudo.model.Highlight;
 import com.biblia.estudo.ui.bible.BibleReaderActivity;
 import com.biblia.estudo.ui.library.HomeActivity;
+import com.biblia.estudo.utils.NavigationHelper;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -78,6 +79,8 @@ public class HighlightsActivity extends Activity {
         highlightDao = new HighlightDao(BibliaApplication.getDatabaseManager().getBibleDatabase());
         groupDao = new GroupDao(BibliaApplication.getDatabaseManager().getBibleDatabase());
         verseDao = new VerseDao(BibliaApplication.getDatabaseManager().getBibleDatabase());
+
+        NavigationHelper.setupBottomNav(this, R.id.navHighlights);
 
         setupToolbar();
         setupSpinners();
@@ -160,7 +163,8 @@ public class HighlightsActivity extends Activity {
     private void enrichWithVerseText() {
         for (Highlight hl : allHighlights) {
             List<com.biblia.estudo.model.Verse> verses = verseDao.getVersesRange(
-                    hl.getBookId(), hl.getChapter(), hl.getVerseStart(), hl.getVerseEnd());
+                    hl.getBookId(), hl.getChapter(), hl.getVerseStart(), hl.getVerseEnd(),
+                    com.biblia.estudo.app.BibliaApplication.getActiveTranslation());
             if (!verses.isEmpty()) {
                 StringBuilder sb = new StringBuilder();
                 for (com.biblia.estudo.model.Verse v : verses) {

@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class CommentaryDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "comentarios.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     public static final String TABLE_COMMENTARIES = "commentaries";
     public static final String TABLE_COMMENTARY_AUTHORS = "commentary_authors";

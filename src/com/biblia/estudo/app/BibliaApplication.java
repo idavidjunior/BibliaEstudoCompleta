@@ -27,6 +27,28 @@ public class BibliaApplication extends Application {
     public static final String KEY_LAST_BOOK = "last_book";
     public static final String KEY_LAST_CHAPTER = "last_chapter";
     public static final String KEY_LAST_VERSE = "last_verse";
+    public static final String KEY_TRANSLATION = "active_translation";
+    public static final String KEY_HOME_ORDER = "home_section_order";
+
+    public static final String DEFAULT_TRANSLATION = "arc";
+
+    public static String getHomeOrder() {
+        return instance.preferences.getString(KEY_HOME_ORDER, "");
+    }
+
+    public static void setHomeOrder(String order) {
+        if (order == null) order = "";
+        instance.preferences.edit().putString(KEY_HOME_ORDER, order).apply();
+    }
+
+    public static String getActiveTranslation() {
+        return instance.preferences.getString(KEY_TRANSLATION, DEFAULT_TRANSLATION);
+    }
+
+    public static void setActiveTranslation(String code) {
+        if (code == null || code.isEmpty()) code = DEFAULT_TRANSLATION;
+        instance.preferences.edit().putString(KEY_TRANSLATION, code).apply();
+    }
 
     @Override
     public void onCreate() {

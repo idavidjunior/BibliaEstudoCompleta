@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.biblia.estudo"
-    android:versionCode="1"
-    android:versionName="1.0.0">
+    android:versionCode="3"
+    android:versionName="1.1.1">
 
     <uses-sdk
         android:minSdkVersion="21"
@@ -137,6 +137,12 @@
             android:name=".ui.apocrypha.ApocryphaReaderActivity"
             android:label="@string/apocryphal_narratives"
             android:configChanges="orientation|screenSize|keyboardHidden" />
+
+        <activity
+            android:name=".ui.crossref.ReferenceMapActivity"
+            android:label="@string/title_cross_references"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="true" />
 
         <service
             android:name=".audio.AudioService"

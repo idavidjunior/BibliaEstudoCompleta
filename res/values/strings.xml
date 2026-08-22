@@ -42,7 +42,11 @@
     <string name="search_by_book">Por Livro</string>
     <string name="search_by_topic">Por Tema</string>
     <string name="search_no_results">Nenhum resultado encontrado</string>
-    <string name="search_results_count">%d resultados encontrados</string>
+    <string name="search_results_count">%d referências encontradas</string>
+    <plurals name="search_results_count">
+        <item quantity="one">%d referência encontrada</item>
+        <item quantity="other">%d referências encontradas</item>
+    </plurals>
 
     <string name="txt_chapter">Capítulo %d</string>
     <string name="txt_verse">Versículo %d</string>

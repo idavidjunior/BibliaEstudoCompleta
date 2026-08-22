@@ -47,7 +47,7 @@
         android:layout_weight="1"
         android:divider="@null"
         android:paddingTop="8dp"
-        android:visibility="gone" />
+        android:visibility="visible" />
 
     <ScrollView
         android:layout_width="match_parent"
@@ -65,5 +65,7 @@
             android:visibility="gone" />
 
     </ScrollView>
+
+    <include layout="@layout/bottom_navigation" />
 
 </LinearLayout>

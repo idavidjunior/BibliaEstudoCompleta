@@ -17,6 +17,7 @@ import android.widget.TextView;
 
 import com.biblia.estudo.R;
 import com.biblia.estudo.app.BibliaApplication;
+import com.biblia.estudo.utils.NavigationHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +47,8 @@ public class ReadingPlanActivity extends Activity {
         progressBar = findViewById(R.id.progressBar);
         progressText = findViewById(R.id.progressText);
         planSelector = findViewById(R.id.planSelector);
+
+        NavigationHelper.setupBottomNav(this, R.id.navMore);
 
         int savedPlan = getPreferences(MODE_PRIVATE).getInt(PREFS_KEY_PLAN_TYPE, 365);
         switch (savedPlan) {

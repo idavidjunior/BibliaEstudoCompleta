@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_select_all"
+        android:title="Selecionar todos" />
+    <item
+        android:id="@+id/action_color"
+        android:title="Marcar cor" />
+    <item
+        android:id="@+id/action_add_to_cross_refs"
+        android:title="Adicionar às Referências Cruzadas" />
+    <item
+        android:id="@+id/action_clear_selection"
+        android:title="Limpar seleção" />
+</menu>

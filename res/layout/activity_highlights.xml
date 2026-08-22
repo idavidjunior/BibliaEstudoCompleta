@@ -116,4 +116,6 @@
         android:textColor="@color/text_secondary"
         android:visibility="gone" />
 
+    <include layout="@layout/bottom_navigation" />
+
 </LinearLayout>

@@ -52,7 +52,7 @@ public class LibraryActivity extends Activity {
         listView = findViewById(R.id.listView);
         testamentSpinner = findViewById(R.id.testamentSpinner);
 
-        NavigationHelper.setupBottomNav(this);
+        NavigationHelper.setupBottomNav(this, R.id.navBible);
         setupSpinner();
         setupSearch();
         loadBooks(currentTestament);

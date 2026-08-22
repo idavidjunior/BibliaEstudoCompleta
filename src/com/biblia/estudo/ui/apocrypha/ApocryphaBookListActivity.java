@@ -31,7 +31,7 @@ public class ApocryphaBookListActivity extends Activity {
         setContentView(R.layout.activity_apocrypha_list);
 
         listView = findViewById(R.id.listView);
-        NavigationHelper.setupBottomNav(this);
+        NavigationHelper.setupBottomNav(this, R.id.navBible);
 
         loadBooks();
     }

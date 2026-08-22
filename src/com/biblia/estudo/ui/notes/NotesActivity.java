@@ -15,6 +15,7 @@ import com.biblia.estudo.data.NoteDao;
 import com.biblia.estudo.model.Book;
 import com.biblia.estudo.model.UserNote;
 import com.biblia.estudo.ui.bible.BibleReaderActivity;
+import com.biblia.estudo.utils.NavigationHelper;
 
 import java.util.List;
 
@@ -37,6 +38,8 @@ public class NotesActivity extends Activity {
 
         noteDao = new NoteDao(BibliaApplication.getDatabaseManager().getBibleDatabase());
         bookDao = new BookDao(BibliaApplication.getDatabaseManager().getBibleDatabase());
+
+        NavigationHelper.setupBottomNav(this, R.id.navMore);
 
         loadNotes();
     }

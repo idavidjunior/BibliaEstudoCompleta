@@ -30,6 +30,7 @@ public class TimelineActivity extends Activity {
         setContentView(R.layout.activity_timeline);
 
         NavigationHelper.setupBackButton(this);
+        NavigationHelper.setupBottomNav(this, R.id.navMore);
         prevPeriod = findViewById(R.id.prevPeriod);
         nextPeriod = findViewById(R.id.nextPeriod);
         timelineContent = findViewById(R.id.timelineContent);

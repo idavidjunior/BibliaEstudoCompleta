@@ -27,6 +27,7 @@ public class MapsActivity extends Activity {
         setContentView(R.layout.activity_maps);
 
         NavigationHelper.setupBackButton(this);
+        NavigationHelper.setupBottomNav(this, R.id.navMore);
         mapsContainer = findViewById(R.id.mapsContainer);
 
         loadMapList();

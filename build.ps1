@@ -12,10 +12,24 @@ $Zipalign = "$BuildTools\zipalign.exe"
 $Javac = "javac"
 
 $AppName = "BibliaEstudoCompleta"
-$Keystore = "$ProjectRoot\debug.keystore"
 $UnsignedApk = "$OutDir\$AppName.unsigned.apk"
 $AlignedApk = "$OutDir\$AppName.aligned.apk"
 $FinalApk = "$OutDir\$AppName.apk"
+
+# Signing: use release.keystore when present, otherwise fall back to debug.keystore
+$ReleaseKeystore = "$ProjectRoot\release.keystore"
+$DebugKeystore = "$ProjectRoot\debug.keystore"
+$Keystore = $DebugKeystore
+$KeystorePass = "android"
+if (Test-Path $ReleaseKeystore) {
+    $Keystore = $ReleaseKeystore
+    $envPass = $env:RELEASE_KEYSTORE_PASS
+    if (-not $envPass -and (Test-Path "$ProjectRoot\..\..\scripts\.env")) {
+        $envLine = Get-Content "$ProjectRoot\..\..\scripts\.env" | Where-Object { $_ -match "^RELEASE_KEYSTORE_PASS=" } | Select-Object -First 1
+        if ($envLine) { $envPass = ($envLine -split "=", 2)[1] }
+    }
+    if ($envPass) { $KeystorePass = $envPass.Trim() }
+}
 
 Write-Host "=== Building $AppName ===" -ForegroundColor Cyan
 
@@ -73,14 +87,12 @@ if ($LASTEXITCODE -ne 0) { Write-Host "Zipalign failed!" -ForegroundColor Red; e
 
 # Step 7: Sign
 Write-Host "[7/7] Signing..." -ForegroundColor Yellow
-& $Apksigner sign --ks $Keystore --ks-pass pass:android --out $FinalApk $AlignedApk
+& $Apksigner sign --ks $Keystore --ks-pass pass:$KeystorePass --out $FinalApk $AlignedApk
 if ($LASTEXITCODE -ne 0) { Write-Host "Signing failed!" -ForegroundColor Red; exit 1 }
 
 # Verify
 Write-Host "=== Verification ===" -ForegroundColor Cyan
 & $Apksigner verify $FinalApk
-
-$size = (Get-Item $FinalApk).Length
-$sizeMB = [math]::Round($size/1MB, 1)
-Write-Host "APK built: $FinalApk ($sizeMB MB)" -ForegroundColor Green
-Write-Host "Icon: ic_launcher.png in drawable-*" -ForegroundColor Green
+$sigName = if ($Keystore -eq $ReleaseKeystore) { "release.keystore" } else { "debug.keystore" }
+Write-Host "Signed with: $sigName" -ForegroundColor Green
+Write-Host "APK built: $FinalApk" -ForegroundColor Green

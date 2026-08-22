@@ -7,7 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class TopicIndexDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "indices.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     public static final String TABLE_TOPICS = "topics";
     public static final String TABLE_TOPIC_VERSES = "topic_verses";

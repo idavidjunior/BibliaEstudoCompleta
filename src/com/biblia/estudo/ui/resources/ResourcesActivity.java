@@ -21,6 +21,7 @@ import com.biblia.estudo.data.UserResourceDao;
 import com.biblia.estudo.model.ResourceFolder;
 import com.biblia.estudo.model.UserResource;
 import com.biblia.estudo.ui.library.ResourceListAdapter;
+import com.biblia.estudo.utils.NavigationHelper;
 import com.biblia.estudo.utils.ResourceImportMenu;
 
 import java.util.ArrayDeque;
@@ -62,6 +63,8 @@ public class ResourcesActivity extends Activity {
         btnBack = findViewById(R.id.btnBack);
         btnImport = findViewById(R.id.btnImport);
         btnSort = findViewById(R.id.btnSort);
+
+        NavigationHelper.setupBottomNav(this, R.id.navMore);
 
         currentSort = getPreferences(MODE_PRIVATE).getInt("sort_order", UserResourceDao.SORT_NAME);
 

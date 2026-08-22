@@ -13,14 +13,20 @@
         android:background="@color/primary"
         android:elevation="4dp">
 
-        <TextView
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textSize="20sp"
-            android:textColor="@android:color/white"
-            android:textStyle="bold"
-            android:gravity="center" />
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:text="@string/app_name"
+                android:textSize="20sp"
+                android:textColor="@android:color/white"
+                android:textStyle="bold" />
+
+        </RelativeLayout>
 
     </Toolbar>
 
@@ -31,9 +37,107 @@
         android:padding="@dimen/padding_medium">
 
         <LinearLayout
+            android:id="@+id/homeSectionsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/quickShortcutsRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:id="@+id/quickBible"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="14dp"
+                    android:layout_marginRight="6dp"
+                    android:background="@drawable/btn_quick_bible"
+                    android:clickable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="📖"
+                        android:textSize="26sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/title_library"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:layout_marginTop="6dp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/quickSearch"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="14dp"
+                    android:layout_marginLeft="6dp"
+                    android:layout_marginRight="6dp"
+                    android:background="@drawable/btn_quick_search"
+                    android:clickable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔍"
+                        android:textSize="26sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/title_search"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:layout_marginTop="6dp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/quickFavorites"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="14dp"
+                    android:layout_marginLeft="6dp"
+                    android:background="@drawable/btn_quick_favorites"
+                    android:clickable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="⭐"
+                        android:textSize="26sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/title_favorites"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:layout_marginTop="6dp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
 
             <FrameLayout
                 android:id="@+id/lastReadingCard"
@@ -150,7 +254,7 @@
             </FrameLayout>
 
             <FrameLayout
-                android:id="@+id/readingPlanProgress"
+                android:id="@+id/dictionarySection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@drawable/card_background"
@@ -163,46 +267,175 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/reading_progress"
-                        android:textSize="14sp"
-                        android:textColor="@color/accent"
-                        android:textStyle="bold"
-                        android:textAllCaps="true" />
-
-                    <ProgressBar
-                        android:id="@+id/readingProgressBar"
-                        style="?android:attr/progressBarStyleHorizontal"
+                    <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="6dp"
-                        android:layout_marginTop="12dp"
-                        android:progressTint="@color/accent"
-                        android:progressBackgroundTint="@color/surface_variant" />
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/title_dictionary"
+                            android:textSize="14sp"
+                            android:textColor="@color/accent"
+                            android:textStyle="bold"
+                            android:textAllCaps="true" />
+
+                        <TextView
+                            android:id="@+id/btnOpenDictionary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:gravity="center"
+                            android:paddingLeft="14dp"
+                            android:paddingRight="14dp"
+                            android:text="Abrir ▸"
+                            android:textColor="@color/primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:clickable="true"
+                            android:background="@drawable/btn_small" />
+
+                    </LinearLayout>
 
                     <TextView
-                        android:id="@+id/readingProgressText"
-                        android:layout_width="wrap_content"
+                        android:id="@+id/dictionaryPreview"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:textSize="14sp"
-                        android:textColor="@color/text_secondary" />
+                        android:text="Toque para pesquisar palavras e conceitos bíblicos"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary"
+                        android:gravity="center" />
 
                 </LinearLayout>
 
             </FrameLayout>
 
-            <Button
-                android:id="@+id/btnStartReading"
+            <FrameLayout
+                android:id="@+id/notesSection"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="@string/start_reading"
-                android:textSize="16sp"
-                android:background="@drawable/btn_primary"
-                android:textColor="@android:color/white"
-                android:textAllCaps="false"
-                android:layout_marginTop="4dp" />
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_background"
+                android:elevation="3dp"
+                android:layout_marginBottom="16dp"
+                android:padding="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/title_notes"
+                            android:textSize="14sp"
+                            android:textColor="@color/accent"
+                            android:textStyle="bold"
+                            android:textAllCaps="true" />
+
+                        <TextView
+                            android:id="@+id/btnOpenNotes"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:gravity="center"
+                            android:paddingLeft="14dp"
+                            android:paddingRight="14dp"
+                            android:text="Ver tudo ▸"
+                            android:textColor="@color/primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:clickable="true"
+                            android:background="@drawable/btn_small" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/notesPreview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Toque para ver suas anotações"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary"
+                        android:gravity="center" />
+
+                </LinearLayout>
+
+            </FrameLayout>
+
+            <FrameLayout
+                android:id="@+id/crossRefSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/card_background"
+                android:elevation="3dp"
+                android:layout_marginBottom="16dp"
+                android:padding="20dp"
+                android:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/crossRefHeader"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Referências Cruzadas"
+                            android:textSize="14sp"
+                            android:textColor="@color/accent"
+                            android:textStyle="bold"
+                            android:textAllCaps="true"
+                            android:clickable="true"
+                            android:background="?android:attr/selectableItemBackground" />
+
+                        <TextView
+                            android:id="@+id/btnOpenCrossRefs"
+                            android:layout_width="wrap_content"
+                            android:layout_height="32dp"
+                            android:gravity="center"
+                            android:paddingLeft="14dp"
+                            android:paddingRight="14dp"
+                            android:text="Ver mapas ▸"
+                            android:textColor="@color/primary"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:clickable="true"
+                            android:background="@drawable/btn_small" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/crossRefPreview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Toque para ver seus mapas de referências"
+                        android:textSize="13sp"
+                        android:textColor="@color/text_secondary"
+                        android:gravity="center" />
+
+                </LinearLayout>
+
+            </FrameLayout>
 
             <FrameLayout
                 android:id="@+id/resourcesSection"
@@ -243,28 +476,28 @@
                             android:layout_width="wrap_content"
                             android:layout_height="32dp"
                             android:gravity="center"
-                            android:paddingLeft="12dp"
-                            android:paddingRight="12dp"
+                            android:paddingLeft="14dp"
+                            android:paddingRight="14dp"
                             android:text="Ver tudo ▸"
-                            android:textColor="@color/accent"
+                            android:textColor="@color/primary"
                             android:textSize="12sp"
                             android:textStyle="bold"
                             android:clickable="true"
-                            android:background="@drawable/nav_item_bg" />
+                            android:background="@drawable/btn_small" />
 
                         <TextView
                             android:id="@+id/btnImport"
                             android:layout_width="wrap_content"
                             android:layout_height="32dp"
                             android:gravity="center"
-                            android:paddingLeft="12dp"
-                            android:paddingRight="12dp"
+                            android:paddingLeft="14dp"
+                            android:paddingRight="14dp"
                             android:text="+ IMPORTAR"
-                            android:textColor="@color/primary"
+                            android:textColor="@android:color/white"
                             android:textSize="12sp"
                             android:textStyle="bold"
                             android:clickable="true"
-                            android:background="@drawable/nav_item_bg" />
+                            android:background="@drawable/btn_small_accent" />
 
                     </LinearLayout>
 
@@ -284,66 +517,6 @@
                         android:textSize="13sp"
                         android:textColor="@color/text_secondary"
                         android:padding="16dp"
-                        android:gravity="center" />
-
-                </LinearLayout>
-
-            </FrameLayout>
-
-            <FrameLayout
-                android:id="@+id/notesSection"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/card_background"
-                android:elevation="3dp"
-                android:layout_marginTop="16dp"
-                android:padding="20dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/title_notes"
-                            android:textSize="14sp"
-                            android:textColor="@color/accent"
-                            android:textStyle="bold"
-                            android:textAllCaps="true" />
-
-                        <TextView
-                            android:id="@+id/btnOpenNotes"
-                            android:layout_width="wrap_content"
-                            android:layout_height="32dp"
-                            android:gravity="center"
-                            android:paddingLeft="12dp"
-                            android:paddingRight="12dp"
-                            android:text="Ver tudo ▸"
-                            android:textColor="@color/accent"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
-                            android:clickable="true"
-                            android:background="@drawable/nav_item_bg" />
-
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/notesPreview"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:text="Toque para ver suas anotações"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_secondary"
                         android:gravity="center" />
 
                 </LinearLayout>

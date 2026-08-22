@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/action_new_map"
+        android:title="Novo mapa"
+        android:icon="@android:drawable/ic_menu_add" />
+
+    <item
+        android:id="@+id/action_switch_map"
+        android:title="Trocar mapa"
+        android:icon="@android:drawable/ic_menu_rotate" />
+
+    <item
+        android:id="@+id/action_fit_screen"
+        android:title="Ajustar à tela"
+        android:icon="@android:drawable/ic_menu_zoom" />
+
+    <item
+        android:id="@+id/action_reset_positions"
+        android:title="Reorganizar"
+        android:icon="@android:drawable/ic_menu_rotate" />
+
+    <item
+        android:id="@+id/action_add_node"
+        android:title="Adicionar versículo"
+        android:icon="@android:drawable/ic_input_add" />
+
+    <item
+        android:id="@+id/action_export_map"
+        android:title="Exportar"
+        android:icon="@android:drawable/ic_menu_save" />
+
+    <item
+        android:id="@+id/action_delete_map"
+        android:title="Excluir mapa"
+        android:icon="@android:drawable/ic_menu_delete" />
+
+</menu>

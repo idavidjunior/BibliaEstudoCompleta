@@ -28,6 +28,7 @@ import com.biblia.estudo.model.Group;
 import com.biblia.estudo.ui.bible.BibleReaderActivity;
 import com.biblia.estudo.ui.highlights.GroupManagerActivity;
 import com.biblia.estudo.ui.library.HomeActivity;
+import com.biblia.estudo.utils.NavigationHelper;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -76,6 +77,8 @@ public class FavoritesActivity extends Activity {
 
         favoriteDao = new FavoriteDao(BibliaApplication.getDatabaseManager().getBibleDatabase());
         groupDao = new GroupDao(BibliaApplication.getDatabaseManager().getBibleDatabase());
+
+        NavigationHelper.setupBottomNav(this, R.id.navFavorites);
 
         setupToolbar();
         setupSpinners();

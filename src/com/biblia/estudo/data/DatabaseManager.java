@@ -18,7 +18,7 @@ public class DatabaseManager {
 
     private static final String PREFS_NAME = "db_manager_prefs";
     private static final String KEY_DB_VERSION = "db_copied_version";
-    private static final int CURRENT_DB_VERSION = 8;
+    private static final int CURRENT_DB_VERSION = 11;
 
     private static DatabaseManager instance;
     private Context context;
@@ -29,6 +29,7 @@ public class DatabaseManager {
     private DictionaryDatabaseHelper dictionaryHelper;
     private CrossReferenceDatabaseHelper crossRefHelper;
     private TopicIndexDatabaseHelper topicHelper;
+    private ReferenceMapDatabaseHelper referenceMapHelper;
 
     private DatabaseManager(Context context) {
         this.context = context.getApplicationContext();
@@ -43,6 +44,7 @@ public class DatabaseManager {
             deleteDatabase("dicionario.db");
             deleteDatabase("referencias.db");
             deleteDatabase("indices.db");
+            deleteDatabase("referencias_cruzadas.db");
         }
 
         copyPrepopulatedDb("biblia_estudo.db");
@@ -50,6 +52,7 @@ public class DatabaseManager {
         copyPrepopulatedDb("dicionario.db");
         copyPrepopulatedDb("referencias.db");
         copyPrepopulatedDb("indices.db");
+        copyPrepopulatedDb("referencias_cruzadas.db");
 
         // Run migrations after copying
         SQLiteDatabase bibleDb = new BibleDatabaseHelper(context).getWritableDatabase();
@@ -64,6 +67,7 @@ public class DatabaseManager {
         this.dictionaryHelper = new DictionaryDatabaseHelper(context);
         this.crossRefHelper = new CrossReferenceDatabaseHelper(context);
         this.topicHelper = new TopicIndexDatabaseHelper(context);
+        this.referenceMapHelper = new ReferenceMapDatabaseHelper(context);
     }
 
     private void deleteDatabase(String dbName) {
@@ -157,6 +161,38 @@ public class DatabaseManager {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_groups_type ON groups(type);");
         } catch (Exception ignored) {}
 
+        // Translation support: ensure translation_id column and translations table
+        try {
+            Cursor c = db.rawQuery("PRAGMA table_info(verses)", null);
+            boolean hasTranslation = false;
+            if (c != null) {
+                while (c.moveToNext()) {
+                    if ("translation_id".equals(c.getString(c.getColumnIndexOrThrow("name")))) {
+                        hasTranslation = true;
+                    }
+                }
+                c.close();
+            }
+            if (!hasTranslation) {
+                db.execSQL("ALTER TABLE verses ADD COLUMN translation_id TEXT NOT NULL DEFAULT 'arc'");
+            }
+            db.execSQL("CREATE TABLE IF NOT EXISTS translations (" +
+                    "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "code TEXT NOT NULL UNIQUE," +
+                    "name TEXT NOT NULL," +
+                    "language TEXT," +
+                    "license TEXT," +
+                    "is_default INTEGER DEFAULT 0" +
+                    ");");
+            try {
+                db.execSQL("INSERT INTO translations (code, name, language, license, is_default) VALUES ('arc', 'Almeida Revista e Corrigida', 'pt-BR', 'Sociedade Bíblica do Brasil (licenciada)', 1)");
+            } catch (Exception ignored) {}
+            try {
+                db.execSQL("INSERT INTO translations (code, name, language, license, is_default) VALUES ('alm1911', 'Almeida 1911', 'pt-BR', 'Domínio público', 0)");
+            } catch (Exception ignored) {}
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_verses_translation ON verses(translation_id);");
+        } catch (Exception ignored) {}
+
         ensureFtsIndex(db);
     }
 
@@ -215,6 +251,10 @@ public class DatabaseManager {
 
     public SQLiteDatabase getTopicIndexDatabase() {
         return getDatabase("topic", topicHelper);
+    }
+
+    public SQLiteDatabase getReferenceMapDatabase() {
+        return getDatabase("reference_map", referenceMapHelper);
     }
 
     private SQLiteDatabase getDatabase(String key, SQLiteOpenHelper helper) {

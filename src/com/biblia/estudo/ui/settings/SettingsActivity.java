@@ -15,6 +15,7 @@ import com.biblia.estudo.R;
 import com.biblia.estudo.app.BibliaApplication;
 import com.biblia.estudo.app.ThemeManager;
 import com.biblia.estudo.utils.BackupManager;
+import com.biblia.estudo.utils.NavigationHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,14 +39,16 @@ public class SettingsActivity extends Activity {
         adapter = new SettingsAdapter();
         settingsList.setAdapter(adapter);
 
+        NavigationHelper.setupBottomNav(this, R.id.navMore);
+
         settingsList.setOnItemClickListener((parent, view, position, id) -> {
             switch (position) {
                 case 0: showThemeDialog(); break;
                 case 1: showFontSizeDialog(); break;
                 case 2: showFontFamilyDialog(); break;
                 case 3: showLineSpacingDialog(); break;
-                case 9: exportBackup(); break;
-                case 10: importBackup(); break;
+                case 8: exportBackup(); break;
+                case 9: importBackup(); break;
             }
         });
     }
@@ -116,8 +119,8 @@ public class SettingsActivity extends Activity {
     }
 
     class SettingsAdapter extends BaseAdapter {
-        private List<SettingsItem> items;
-        private String[] icons = {"☀", "A", "A", "¶", "#", "📝", "💬", "🔗", "↕", "💾", "📂"};
+        List<SettingsItem> items;
+        private String[] icons = {"☀", "A", "A", "¶", "#", "📝", "💬", "🔗", "💾", "📂", "📂"};
 
         SettingsAdapter() {
             items = new ArrayList<>();
@@ -146,6 +149,13 @@ public class SettingsActivity extends Activity {
             SettingsItem item = items.get(pos);
             ((TextView) convertView.findViewById(R.id.settingsIcon)).setText(icons[pos]);
             ((TextView) convertView.findViewById(R.id.settingsTitle)).setText(item.title);
+            TextView subtitleView = convertView.findViewById(R.id.settingsSubtitle);
+            if (item.subtitle != null && !item.subtitle.isEmpty()) {
+                subtitleView.setText(item.subtitle);
+                subtitleView.setVisibility(View.VISIBLE);
+            } else {
+                subtitleView.setVisibility(View.GONE);
+            }
             return convertView;
         }
     }

@@ -11,11 +11,13 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
 import com.biblia.estudo.R;
 import com.biblia.estudo.app.BibliaApplication;
+import com.biblia.estudo.utils.NavigationHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +38,8 @@ public class TopicIndexActivity extends Activity {
         searchField = findViewById(R.id.searchField);
         topicsList = findViewById(R.id.topicsList);
 
+        NavigationHelper.setupBottomNav(this);
+
         searchField.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
@@ -51,40 +55,60 @@ public class TopicIndexActivity extends Activity {
     private void loadTopics(String query) {
         final List<TopicItem> topics = new ArrayList<>();
         SQLiteDatabase db = BibliaApplication.getDatabaseManager().getTopicIndexDatabase();
-        Cursor c;
+        Cursor c = null;
 
-        if (query.isEmpty()) {
-            c = db.rawQuery("SELECT _id, name, description FROM topics ORDER BY name ASC LIMIT 200", null);
-        } else {
-            c = db.rawQuery("SELECT _id, name, description FROM topics WHERE name LIKE ? ORDER BY name ASC LIMIT 200",
-                    new String[]{"%" + query + "%"});
-        }
-
-        while (c.moveToNext()) {
-            TopicItem item = new TopicItem();
-            item.name = c.getString(c.getColumnIndexOrThrow("name"));
-            item.description = c.getString(c.getColumnIndexOrThrow("description"));
-            topics.add(item);
-        }
-        c.close();
-
-        topicsList.setAdapter(new BaseAdapter() {
-            @Override public int getCount() { return topics.size(); }
-            @Override public Object getItem(int pos) { return topics.get(pos); }
-            @Override public long getItemId(int pos) { return pos; }
-            @Override
-            public View getView(int pos, View convertView, ViewGroup parent) {
-                if (convertView == null) {
-                    convertView = inflater.inflate(R.layout.list_item_topic, parent, false);
-                }
-                TopicItem t = topics.get(pos);
-                ((TextView) convertView.findViewById(R.id.topicName)).setText(t.name);
-                String desc = t.description;
-                if (desc != null && desc.length() > 80) desc = desc.substring(0, 80) + "...";
-                ((TextView) convertView.findViewById(R.id.topicCount)).setText(desc);
-                return convertView;
+        try {
+            if (query.isEmpty()) {
+                c = db.rawQuery("SELECT _id, name, description FROM topics ORDER BY name ASC LIMIT 200", null);
+            } else {
+                c = db.rawQuery("SELECT _id, name, description FROM topics WHERE name LIKE ? ORDER BY name ASC LIMIT 200",
+                        new String[]{"%" + query + "%"});
             }
-        });
+
+            if (c != null) {
+                while (c.moveToNext()) {
+                    TopicItem item = new TopicItem();
+                    item.name = c.getString(c.getColumnIndexOrThrow("name"));
+                    item.description = c.getString(c.getColumnIndexOrThrow("description"));
+                    topics.add(item);
+                }
+            }
+        } catch (Exception e) {
+            topics.clear();
+        } finally {
+            if (c != null) c.close();
+        }
+
+        if (topics.isEmpty()) {
+            topicsList.setAdapter(null);
+            topicsList.setEmptyView(null);
+            TextView emptyView = new TextView(this);
+            emptyView.setText("Nenhum tópico encontrado");
+            emptyView.setTextSize(16);
+            emptyView.setTextColor(getResources().getColor(R.color.text_secondary));
+            emptyView.setGravity(android.view.Gravity.CENTER);
+            emptyView.setPadding(0, 80, 0, 0);
+            ((ViewGroup) topicsList.getParent()).addView(emptyView);
+            topicsList.setEmptyView(emptyView);
+        } else {
+            topicsList.setAdapter(new BaseAdapter() {
+                @Override public int getCount() { return topics.size(); }
+                @Override public Object getItem(int pos) { return topics.get(pos); }
+                @Override public long getItemId(int pos) { return pos; }
+                @Override
+                public View getView(int pos, View convertView, ViewGroup parent) {
+                    if (convertView == null) {
+                        convertView = inflater.inflate(R.layout.list_item_topic, parent, false);
+                    }
+                    TopicItem t = topics.get(pos);
+                    ((TextView) convertView.findViewById(R.id.topicName)).setText(t.name);
+                    String desc = t.description;
+                    if (desc != null && desc.length() > 80) desc = desc.substring(0, 80) + "...";
+                    ((TextView) convertView.findViewById(R.id.topicCount)).setText(desc != null ? desc : "");
+                    return convertView;
+                }
+            });
+        }
     }
 
     static class TopicItem {
