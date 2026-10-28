@@ -366,8 +366,8 @@ public class BibleReaderActivity extends Activity {
 
         if (targetVerse > 0) scrollToVerse(targetVerse);
 
-        progressDao.saveProgress(bookId, chapter, 1);
-        themeManager.saveLastPosition(bookId, chapter, 1);
+        progressDao.saveProgress(bookId, chapter, currentVerse);
+        themeManager.saveLastPosition(bookId, chapter, currentVerse);
     }
 
     private android.graphics.drawable.Drawable createTargetHighlightDrawable() {

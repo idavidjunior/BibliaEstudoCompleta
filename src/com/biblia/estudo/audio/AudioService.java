@@ -3,6 +3,7 @@ package com.biblia.estudo.audio;
 import android.app.Service;
 import android.content.Intent;
 import android.media.MediaPlayer;
+import android.media.MediaPlayer.OnPreparedListener;
 import android.os.Binder;
 import android.os.IBinder;
 
@@ -44,8 +45,13 @@ public class AudioService extends Service implements MediaPlayer.OnCompletionLis
             }
             mediaPlayer.reset();
             mediaPlayer.setDataSource(audioFilePath);
-            mediaPlayer.prepare();
-            mediaPlayer.start();
+            mediaPlayer.setOnPreparedListener(new OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mp) {
+                    mp.start();
+                }
+            });
+            mediaPlayer.prepareAsync();
         } catch (IOException e) {
             if (listener != null) {
                 listener.onError("Erro ao reproduzir áudio: " + e.getMessage());
@@ -62,8 +68,13 @@ public class AudioService extends Service implements MediaPlayer.OnCompletionLis
             android.content.res.AssetFileDescriptor afd = getAssets().openFd(assetPath);
             mediaPlayer.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
             afd.close();
-            mediaPlayer.prepare();
-            mediaPlayer.start();
+            mediaPlayer.setOnPreparedListener(new OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mp) {
+                    mp.start();
+                }
+            });
+            mediaPlayer.prepareAsync();
         } catch (IOException e) {
             if (listener != null) {
                 listener.onError("Erro ao reproduzir áudio: " + e.getMessage());

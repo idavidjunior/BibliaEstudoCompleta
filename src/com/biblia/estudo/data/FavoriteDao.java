@@ -19,6 +19,9 @@ public class FavoriteDao {
     }
 
     public long insert(Favorite fav) {
+        if (isFavorite(fav.getBookId(), fav.getChapter(), fav.getVerseNumber())) {
+            return -1;
+        }
         ContentValues cv = new ContentValues();
         cv.put("book_id", fav.getBookId());
         cv.put("chapter", fav.getChapter());

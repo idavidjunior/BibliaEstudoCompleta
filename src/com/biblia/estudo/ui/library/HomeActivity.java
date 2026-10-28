@@ -80,7 +80,6 @@ public class HomeActivity extends Activity {
         BibliaApplication.getThemeManager().applyTheme(this);
         setContentView(R.layout.activity_home);
         setActionBar(findViewById(R.id.toolbar));
-        setActionBar(findViewById(R.id.toolbar));
 
         SQLiteDatabase db = BibliaApplication.getDatabaseManager().getBibleDatabase();
         progressDao = new ReadingProgressDao(db);
@@ -193,9 +192,21 @@ public class HomeActivity extends Activity {
 
     private void setupVerseOfDay() {
         SQLiteDatabase db = BibliaApplication.getDatabaseManager().getBibleDatabase();
+        android.database.Cursor countC = db.rawQuery(
+                "SELECT COUNT(*) FROM verses v JOIN books b ON v.book_id = b._id", null);
+        int total = 0;
+        if (countC != null && countC.moveToFirst()) {
+            total = countC.getInt(0);
+        }
+        if (countC != null) countC.close();
+
+        if (total <= 0) return;
+
+        int offset = (int) (Math.random() * total);
         android.database.Cursor c = db.rawQuery(
                 "SELECT v.text, v.chapter, v.verse_number, b.name FROM verses v " +
-                        "JOIN books b ON v.book_id = b._id ORDER BY RANDOM() LIMIT 1", null);
+                        "JOIN books b ON v.book_id = b._id LIMIT 1 OFFSET ?",
+                new String[]{String.valueOf(offset)});
         if (c != null && c.moveToFirst()) {
             String text = c.getString(0);
             int chapter = c.getInt(1);
@@ -203,6 +214,8 @@ public class HomeActivity extends Activity {
             String bookName = c.getString(3);
             verseOfDayText.setText("\"" + text + "\"");
             verseOfDayRef.setText(bookName + " " + chapter + ":" + verse);
+            c.close();
+        } else if (c != null) {
             c.close();
         }
     }
@@ -257,13 +270,16 @@ public class HomeActivity extends Activity {
         String[] order = saved.split(",");
         List<View> sections = getHomeSections();
         for (String idStr : order) {
-            for (View v : sections) {
-                if (v.getId() == Integer.parseInt(idStr.trim())) {
-                    container.removeView(v);
-                    container.addView(v);
-                    break;
+            try {
+                int id = Integer.parseInt(idStr.trim());
+                for (View v : sections) {
+                    if (v.getId() == id) {
+                        container.removeView(v);
+                        container.addView(v);
+                        break;
+                    }
                 }
-            }
+            } catch (NumberFormatException ignored) {}
         }
     }
 
@@ -448,7 +464,9 @@ public class HomeActivity extends Activity {
                 int idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME);
                 if (idx >= 0) name = c.getString(idx);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            // ignorar falha de leitura de nome, usar fallback
+        }
         if (name == null || name.isEmpty()) name = uri.getLastPathSegment();
         return name != null ? name : "Arquivo";
     }
@@ -460,7 +478,9 @@ public class HomeActivity extends Activity {
                 int idx = c.getColumnIndex(OpenableColumns.SIZE);
                 if (idx >= 0) size = c.getLong(idx);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            // ignorar falha de leitura de tamanho, usar zero
+        }
         return size;
     }
 

@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.biblia.estudo"
-    android:versionCode="3"
-    android:versionName="1.1.1">
+    android:versionCode="5"
+    android:versionName="1.1.3">
 
     <uses-sdk
         android:minSdkVersion="21"
@@ -45,98 +45,117 @@
 
         <activity
             android:name=".ui.library.LibraryActivity"
-            android:label="@string/app_name" />
+            android:label="@string/app_name"
+            android:exported="false" />
 
         <activity
             android:name=".ui.bible.BibleReaderActivity"
             android:label="@string/title_bible_reader"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize"
+            android:exported="false" />
 
         <activity
             android:name=".ui.search.SearchActivity"
             android:label="@string/title_search"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.study.StudyCommentaryActivity"
             android:label="@string/title_commentaries"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.dictionary.DictionaryActivity"
             android:label="@string/title_dictionary"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.favorites.FavoritesActivity"
             android:label="@string/title_favorites"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.highlights.HighlightsActivity"
             android:label="@string/title_highlights"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.highlights.GroupManagerActivity"
             android:label="@string/manage_groups"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.notes.NotesActivity"
             android:label="@string/title_notes"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.readingplan.ReadingPlanActivity"
             android:label="@string/title_reading_plan"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.maps.MapsActivity"
             android:label="@string/title_maps"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.timeline.TimelineActivity"
             android:label="@string/title_timeline"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.settings.SettingsActivity"
             android:label="@string/title_settings"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.about.AboutActivity"
             android:label="@string/title_about"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.study.CrossReferenceActivity"
             android:label="@string/title_cross_references"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.study.TopicIndexActivity"
             android:label="@string/title_topic_index"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.resources.ResourcesActivity"
             android:label="@string/my_resources"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.apocrypha.ApocryphaBookListActivity"
             android:label="@string/apocryphal_narratives"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.apocrypha.ApocryphaReaderActivity"
             android:label="@string/apocryphal_narratives"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
 
         <activity
             android:name=".ui.crossref.ReferenceMapActivity"

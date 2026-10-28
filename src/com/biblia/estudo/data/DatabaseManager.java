@@ -47,22 +47,33 @@ public class DatabaseManager {
             deleteDatabase("referencias_cruzadas.db");
         }
 
-        copyPrepopulatedDb("biblia_estudo.db");
-        copyPrepopulatedDb("comentarios.db");
-        copyPrepopulatedDb("dicionario.db");
-        copyPrepopulatedDb("referencias.db");
-        copyPrepopulatedDb("indices.db");
-        copyPrepopulatedDb("referencias_cruzadas.db");
+        if (!copyPrepopulatedDb("biblia_estudo.db")) {
+            throw new RuntimeException("Falha ao copiar banco de dados: biblia_estudo.db");
+        }
+        if (!copyPrepopulatedDb("comentarios.db")) {
+            throw new RuntimeException("Falha ao copiar banco de dados: comentarios.db");
+        }
+        if (!copyPrepopulatedDb("dicionario.db")) {
+            throw new RuntimeException("Falha ao copiar banco de dados: dicionario.db");
+        }
+        if (!copyPrepopulatedDb("referencias.db")) {
+            throw new RuntimeException("Falha ao copiar banco de dados: referencias.db");
+        }
+        if (!copyPrepopulatedDb("indices.db")) {
+            throw new RuntimeException("Falha ao copiar banco de dados: indices.db");
+        }
+        if (!copyPrepopulatedDb("referencias_cruzadas.db")) {
+            throw new RuntimeException("Falha ao copiar banco de dados: referencias_cruzadas.db");
+        }
 
-        // Run migrations after copying
-        SQLiteDatabase bibleDb = new BibleDatabaseHelper(context).getWritableDatabase();
+        // Run migrations after copying using the same helper instance
+        this.bibleHelper = new BibleDatabaseHelper(context);
+        SQLiteDatabase bibleDb = bibleHelper.getWritableDatabase();
         migrateBibleDatabase(bibleDb);
 
         if (copiedVersion < CURRENT_DB_VERSION) {
             prefs.edit().putInt(KEY_DB_VERSION, CURRENT_DB_VERSION).apply();
         }
-
-        this.bibleHelper = new BibleDatabaseHelper(context);
         this.commentaryHelper = new CommentaryDatabaseHelper(context);
         this.dictionaryHelper = new DictionaryDatabaseHelper(context);
         this.crossRefHelper = new CrossReferenceDatabaseHelper(context);
@@ -77,9 +88,9 @@ public class DatabaseManager {
         }
     }
 
-    private void copyPrepopulatedDb(String dbName) {
+    private boolean copyPrepopulatedDb(String dbName) {
         File dbFile = context.getDatabasePath(dbName);
-        if (dbFile.exists()) return;
+        if (dbFile.exists()) return true;
 
         try {
             dbFile.getParentFile().mkdirs();
@@ -90,7 +101,10 @@ public class DatabaseManager {
             while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
             in.close();
             out.close();
-        } catch (Exception ignored) {}
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private void migrateBibleDatabase(SQLiteDatabase db) {
@@ -116,7 +130,9 @@ public class DatabaseManager {
             if (!hasGroupId) {
                 db.execSQL("ALTER TABLE highlights ADD COLUMN group_id INTEGER DEFAULT 0");
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            throw new RuntimeException("Falha na migração da tabela highlights: " + e.getMessage(), e);
+        }
 
         try {
             Cursor c = db.rawQuery("PRAGMA table_info(favorites)", null);
@@ -143,7 +159,9 @@ public class DatabaseManager {
                     db.execSQL("UPDATE favorites SET tags = tag WHERE tag IS NOT NULL");
                 } catch (Exception ignored) {}
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            throw new RuntimeException("Falha na migração da tabela favorites: " + e.getMessage(), e);
+        }
 
         // Create groups table if not exists
         try {
@@ -159,7 +177,9 @@ public class DatabaseManager {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_highlights_group ON highlights(group_id);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_favorites_group ON favorites(group_id);");
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_groups_type ON groups(type);");
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            throw new RuntimeException("Falha ao criar tabela groups: " + e.getMessage(), e);
+        }
 
         // Translation support: ensure translation_id column and translations table
         try {
@@ -191,7 +211,9 @@ public class DatabaseManager {
                 db.execSQL("INSERT INTO translations (code, name, language, license, is_default) VALUES ('alm1911', 'Almeida 1911', 'pt-BR', 'Domínio público', 0)");
             } catch (Exception ignored) {}
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_verses_translation ON verses(translation_id);");
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            throw new RuntimeException("Falha no suporte a traduções: " + e.getMessage(), e);
+        }
 
         ensureFtsIndex(db);
     }
@@ -206,7 +228,7 @@ public class DatabaseManager {
             }
             if (populated) return;
 
-            Cursor v = db.rawQuery("SELECT rowid, text FROM verses", null);
+            Cursor v = db.rawQuery("SELECT rowid, text, book_id, chapter, verse_number FROM verses", null);
             if (v != null) {
                 db.beginTransaction();
                 try {
@@ -215,7 +237,7 @@ public class DatabaseManager {
                         if (text == null || text.isEmpty()) continue;
                         long rowid = v.getLong(0);
                         db.execSQL("INSERT INTO verses_fts(docid, text, book_id, chapter, verse_number) VALUES (?,?,?,?,?)",
-                                new Object[]{rowid, SearchUtils.normalize(text), null, null, null});
+                                new Object[]{rowid, SearchUtils.normalize(text), v.getLong(2), v.getInt(3), v.getInt(4)});
                     }
                     db.setTransactionSuccessful();
                 } finally {
@@ -223,7 +245,9 @@ public class DatabaseManager {
                 }
                 v.close();
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            throw new RuntimeException("Falha ao construir índice FTS: " + e.getMessage(), e);
+        }
     }
 
     public static synchronized DatabaseManager getInstance(Context context) {

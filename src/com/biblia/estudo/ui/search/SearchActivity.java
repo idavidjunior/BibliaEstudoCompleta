@@ -215,6 +215,11 @@ public class SearchActivity extends Activity {
     }
 
     private void performSearch(String query) {
+        if (lastSearchCursor != null) {
+            lastSearchCursor.close();
+            lastSearchCursor = null;
+        }
+
         Cursor cursor = null;
         switch (searchMode) {
             case 0:
